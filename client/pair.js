@@ -10,7 +10,6 @@
   const nearbyText = document.getElementById("nearby-text");
   const nearbyList = document.getElementById("nearby-list");
   const nearbyInvite = document.getElementById("nearby-invite");
-  const COLS = ["A", "B", "C", "D"];
   const TAP_MOVE_PX = 10;
   const NEARBY_INTERVAL_MS = 5000;
   const MANUAL_HINT_AFTER_MS = 11000;
@@ -22,7 +21,6 @@
   let bucket = null;
   let done = null;
   let busy = false;
-  let drag = null;
   let seq = 0;
   let transitionTimer = 0;
   let nearbyTimer = 0;
@@ -30,14 +28,11 @@
   let nearbyStartedAt = 0;
   let wrongTimer = 0;
   let nearbyId = "";
+  let activeGlobe = null;
   let activeGuide = null;
   let activeInviteId = "";
   const seenInvites = new Set();
   const nearbyDrafts = new Map();
-
-  function coord(pos) {
-    return COLS[(pos - 1) % 4] + (Math.floor((pos - 1) / 4) + 1);
-  }
 
   function shuffle(arr) {
     const out = arr.slice();
@@ -98,64 +93,403 @@
     if (backBtn) backBtn.hidden = !first;
   }
 
-  function setGridMotion(level) {
-    const patterns = [
-      { gx: "34deg", gy: "-16deg", gz: "-3deg", cx: "-2deg", cy: "2deg", rx: "-54deg", ry: "24deg", rz: "6deg" },
-      { gx: "-30deg", gy: "18deg", gz: "4deg", cx: "2deg", cy: "-2deg", rx: "52deg", ry: "-26deg", rz: "-7deg" },
-      { gx: "24deg", gy: "31deg", gz: "-5deg", cx: "-1deg", cy: "-3deg", rx: "-42deg", ry: "-38deg", rz: "8deg" },
-    ];
-    const p = patterns[Math.abs(level) % patterns.length];
-    grid.dataset.level = String(level);
-    grid.style.setProperty("--grid-rx", p.gx);
-    grid.style.setProperty("--grid-ry", p.gy);
-    grid.style.setProperty("--grid-rz", p.gz);
-    grid.style.setProperty("--grid-cx", p.cx);
-    grid.style.setProperty("--grid-cy", p.cy);
-    grid.style.setProperty("--cell-rx", p.rx);
-    grid.style.setProperty("--cell-ry", p.ry);
-    grid.style.setProperty("--cell-rz", p.rz);
-  }
-
   function prepareGrid(moveMode, level) {
     clearTimeout(transitionTimer);
-    setGridMotion(level || 0);
-    grid.className = moveMode ? "grid grid-move grid-loading" : "grid grid-loading";
+    grid.className = "grid grid-loading";
   }
 
   function revealGrid(moveMode, level) {
     clearTimeout(transitionTimer);
-    setGridMotion(level || 0);
-    grid.className = moveMode ? "grid grid-move grid-enter" : "grid grid-enter";
+    grid.className = "grid grid-enter";
     transitionTimer = setTimeout(() => grid.classList.remove("grid-enter"), 680);
   }
 
-  function setGlobeSlot(el, index, total, level) {
-    const safeTotal = Math.max(1, total);
-    const golden = Math.PI * (3 - Math.sqrt(5));
-    const y = 1 - ((index + 0.5) / safeTotal) * 2;
-    const ring = Math.sqrt(Math.max(0, 1 - y * y));
-    const theta = golden * index + level * 0.92;
-    let x = Math.cos(theta) * ring;
-    let z = Math.sin(theta) * ring;
+  function clearGrid() {
+    destroyGlobe();
+    grid.textContent = "";
+  }
 
-    const tilt = -0.22 + level * 0.16;
-    const cos = Math.cos(tilt);
-    const sin = Math.sin(tilt);
-    const tiltedY = y * cos - z * sin;
-    z = y * sin + z * cos;
+  function destroyGlobe() {
+    if (!activeGlobe) return;
+    activeGlobe.destroy();
+    activeGlobe = null;
+  }
 
-    const depth = (z + 1) / 2;
-    const scale = 0.68 + depth * 0.46;
-    const alpha = 0.42 + depth * 0.58;
+  function renderEmojiGlobe(items, level, moveMode) {
+    clearGrid();
 
-    el.style.setProperty("--i", String(index));
-    el.style.setProperty("--gx", `${(x * (106 + depth * 16)).toFixed(2)}px`);
-    el.style.setProperty("--gy", `${(tiltedY * 94 - z * 10).toFixed(2)}px`);
-    el.style.setProperty("--gz", `${(z * 78).toFixed(2)}px`);
-    el.style.setProperty("--gs", scale.toFixed(3));
-    el.style.setProperty("--ga", alpha.toFixed(3));
-    el.style.setProperty("--zi", String(Math.round(depth * 1000) + index));
-    el.style.setProperty("--cell-dx", `${((index % 4) - 1.5) * 14}px`);
+    const shell = document.createElement("div");
+    shell.className = "emoji-globe-shell";
+
+    const canvas = document.createElement("canvas");
+    canvas.className = "emoji-globe";
+    canvas.setAttribute("aria-label", moveMode ? "emoji pairing globe" : "choose next emoji");
+    canvas.setAttribute("role", "img");
+
+    const speedRing = document.createElement("div");
+    speedRing.className = "emoji-globe-speed-ring";
+    speedRing.setAttribute("aria-hidden", "true");
+
+    shell.appendChild(canvas);
+    shell.appendChild(speedRing);
+    grid.appendChild(shell);
+
+    activeGlobe = createEmojiGlobe(canvas, speedRing, items, {
+      level,
+      moveMode,
+      onFirst: (hit, target) => {
+        const pos = target ? target.item.pos : hit.item.tapPos;
+        commitFirst(hit.item.id, pos, hit.item.symbol, { globeKey: hit.key, globeId: hit.item.id });
+      },
+      onPick: (hit) => pick({ id: hit.item.id, symbol: hit.item.symbol }, { globeKey: hit.key, globeId: hit.item.id }),
+    });
+  }
+
+  function createEmojiGlobe(canvas, speedRing, items, opts) {
+    const ctx = canvas.getContext("2d", { alpha: true });
+    const level = opts.level || 0;
+    const moveMode = !!opts.moveMode;
+    const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const phi = Math.PI * (3 - Math.sqrt(5));
+    const visualCount = 280;
+    const base = new Float32Array(visualCount * 3);
+    const visualItems = new Array(visualCount);
+    const projected = Array.from({ length: visualCount }, () => ({
+      item: null,
+      key: 0,
+      x: 0,
+      y: 0,
+      z: 0,
+      scale: 1,
+      alpha: 1,
+      r: 16,
+      visible: false,
+    }));
+    const visible = [];
+
+    for (let index = 0; index < visualCount; index++) {
+      const n = Math.max(1, visualCount);
+      const y = 1 - (index / Math.max(1, n - 1)) * 2;
+      const ring = Math.sqrt(Math.max(0, 1 - y * y));
+      const theta = phi * index + level * 0.95;
+      const itemIndex = items.length ? index % items.length : 0;
+      base[index * 3] = Math.cos(theta) * ring;
+      base[index * 3 + 1] = y;
+      base[index * 3 + 2] = Math.sin(theta) * ring;
+      visualItems[index] = items[itemIndex];
+    }
+
+    let width = 280;
+    let height = 280;
+    let dpr = 1;
+    let rx = 0.34 + level * 0.22;
+    let ry = level * 1.18;
+    let velRX = 0;
+    let velRY = 0;
+    let raf = 0;
+    let running = true;
+    let selectedKey = 0;
+    let missKey = 0;
+    let hoverKey = 0;
+    let pointer = null;
+    let ghost = null;
+    let ringOn = false;
+    const friction = 0.92;
+    const sensitivity = 0.006;
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      width = Math.max(240, rect.width || 280);
+      height = Math.max(240, rect.height || width);
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function drawShell(cx, cy, radius) {
+      const glow = ctx.createRadialGradient(cx - radius * 0.28, cy - radius * 0.35, radius * 0.06, cx, cy, radius * 1.02);
+      glow.addColorStop(0, "rgba(255,255,255,.22)");
+      glow.addColorStop(0.28, "rgba(111,143,255,.12)");
+      glow.addColorStop(0.66, "rgba(20,24,43,.05)");
+      glow.addColorStop(1, "rgba(20,24,43,0)");
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius * 1.02, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.save();
+      ctx.globalAlpha = 0.14;
+      ctx.strokeStyle = "rgba(196,213,255,.56)";
+      ctx.lineWidth = 1;
+      for (let i = -2; i <= 2; i++) {
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + i * radius * 0.18, radius * (0.82 - Math.abs(i) * 0.09), radius * 0.14, ry * 0.35, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      for (let i = -2; i <= 2; i++) {
+        ctx.beginPath();
+        ctx.ellipse(cx + i * radius * 0.12, cy, radius * 0.16, radius * 0.82, ry * 0.5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function frame() {
+      if (!running) return;
+      raf = requestAnimationFrame(frame);
+      if (!reduceMotion && !pointer) {
+        const moving = Math.abs(velRY) > 0.0003 || Math.abs(velRX) > 0.0003;
+        if (moving) {
+          ry += velRY;
+          rx += velRX;
+          velRY *= friction;
+          velRX *= friction;
+        } else {
+          ry += 0.003 + level * 0.0008;
+          rx += 0.0004;
+          velRY = 0;
+          velRX = 0;
+        }
+      }
+
+      const speed = Math.hypot(velRY, velRX);
+      const wantRing = speed > 0.018;
+      if (speedRing && wantRing !== ringOn) {
+        speedRing.classList.toggle("on", wantRing);
+        ringOn = wantRing;
+      }
+
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 1;
+      ctx.clearRect(0, 0, width, height);
+      const cx = width / 2;
+      const cy = height / 2;
+      const radius = Math.min(width, height) * 0.457;
+      const fov = radius * 1.95;
+
+      drawShell(cx, cy, radius);
+
+      const cosX = Math.cos(rx);
+      const sinX = Math.sin(rx);
+      const cosY = Math.cos(ry);
+      const sinY = Math.sin(ry);
+      visible.length = 0;
+
+      for (let index = 0; index < visualCount; index++) {
+        const bx = base[index * 3];
+        const by = base[index * 3 + 1];
+        const bz = base[index * 3 + 2];
+        const y1 = by * cosX - bz * sinX;
+        const z1 = by * sinX + bz * cosX;
+        const x2 = bx * cosY + z1 * sinY;
+        const z2 = -bx * sinY + z1 * cosY;
+        const p = projected[index];
+        p.visible = false;
+        if (z2 > 0.72) continue;
+
+        const scale = fov / (fov + z2 * radius);
+        const x = x2 * radius * scale + cx;
+        const y = y1 * radius * scale + cy;
+        const depthAlpha = z2 <= 0 ? 1 : Math.max(0.3, 1 - z2 * 0.8);
+        const edgeDist = Math.hypot((x - cx) / radius, (y - cy) / radius);
+        const t = Math.min(1, Math.max(0, (edgeDist - 0.75) / 0.25));
+        const edgeAlpha = 1 - t * t * (3 - 2 * t);
+
+        p.item = visualItems[index];
+        p.key = index + 1;
+        p.x = x;
+        p.y = y;
+        p.z = z2;
+        p.scale = scale;
+        p.alpha = depthAlpha * edgeAlpha;
+        p.r = Math.max(14, Math.round(32 * scale) * 0.72);
+        p.visible = !!p.item && p.alpha >= 0.01;
+        if (p.visible) visible.push(p);
+      }
+
+      visible.sort((a, b) => b.z - a.z);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = "transparent";
+
+      let lastFontSize = -1;
+      for (const p of visible) {
+        if (!p.item) continue;
+
+        const isSelected = selectedKey === p.key;
+        const isMiss = missKey === p.key;
+        const isHover = hoverKey === p.key;
+        const baseSize = Math.max(7, Math.round(32 * p.scale));
+        const size = Math.round(isSelected || isMiss || isHover ? baseSize * 1.18 : baseSize);
+
+        if (isHover || isSelected || isMiss) {
+          ctx.save();
+          ctx.globalAlpha = isMiss ? 0.72 : isSelected ? 0.6 : 0.3;
+          ctx.fillStyle = isMiss ? "rgba(239,68,68,.22)" : "rgba(255,255,255,.22)";
+          ctx.strokeStyle = isMiss ? "rgba(239,68,68,.8)" : "rgba(200,218,255,.7)";
+          ctx.lineWidth = isSelected ? 2 : 1;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * 1.28, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        ctx.globalAlpha = p.alpha;
+        if (size !== lastFontSize) {
+          ctx.font = `${size}px sans-serif`;
+          lastFontSize = size;
+        }
+        ctx.fillText(p.item.symbol, p.x, p.y);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function localPoint(ev) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: ev.clientX - rect.left,
+        y: ev.clientY - rect.top,
+      };
+    }
+
+    function hitTest(x, y) {
+      return projected
+        .slice()
+        .sort((a, b) => a.z - b.z)
+        .find((p) => p.visible && Math.hypot(p.x - x, p.y - y) <= p.r * 1.65);
+    }
+
+    function makeGhost(hit, ev) {
+      ghost = document.createElement("div");
+      ghost.className = "drag-ghost";
+      ghost.textContent = hit.item.symbol;
+      document.body.appendChild(ghost);
+      moveGhost(ev);
+    }
+
+    function moveGhost(ev) {
+      if (!ghost) return;
+      ghost.style.left = ev.clientX + "px";
+      ghost.style.top = ev.clientY + "px";
+    }
+
+    function clearPointer() {
+      hoverKey = 0;
+      pointer = null;
+      if (ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost);
+      ghost = null;
+    }
+
+    function onPointerDown(ev) {
+      if (busy) return;
+      const pt = localPoint(ev);
+      const hit = hitTest(pt.x, pt.y);
+      pointer = {
+        id: ev.pointerId,
+        mode: moveMode && hit ? "first-drag" : hit ? "press" : "rotate",
+        hit,
+        startX: ev.clientX,
+        startY: ev.clientY,
+        prevX: ev.clientX,
+        prevY: ev.clientY,
+        prevTime: performance.now(),
+        dragVX: 0,
+        dragVY: 0,
+      };
+      velRX = 0;
+      velRY = 0;
+      if (hit) hoverKey = hit.key;
+      if (moveMode && hit) makeGhost(hit, ev);
+      try {
+        canvas.setPointerCapture(ev.pointerId);
+      } catch {}
+      ev.preventDefault();
+    }
+
+    function onPointerMove(ev) {
+      if (!pointer) return;
+      const moved = Math.hypot(ev.clientX - pointer.startX, ev.clientY - pointer.startY);
+      if (pointer.mode === "press" && moved > TAP_MOVE_PX) pointer.mode = "rotate";
+
+      if (pointer.mode === "rotate") {
+        const now = performance.now();
+        const dt = Math.max(1, now - pointer.prevTime);
+        const dx = ev.clientX - pointer.prevX;
+        const dy = ev.clientY - pointer.prevY;
+        pointer.dragVX = (dx / dt) * 16;
+        pointer.dragVY = (dy / dt) * 16;
+        pointer.prevTime = now;
+        ry += dx * sensitivity;
+        rx += dy * sensitivity;
+        hoverKey = 0;
+      } else if (pointer.mode === "first-drag") {
+        moveGhost(ev);
+        const pt = localPoint(ev);
+        const target = hitTest(pt.x, pt.y);
+        hoverKey = target ? target.key : pointer.hit.key;
+      }
+      pointer.prevX = ev.clientX;
+      pointer.prevY = ev.clientY;
+      ev.preventDefault();
+    }
+
+    function onPointerUp(ev) {
+      if (!pointer) return;
+      const pt = localPoint(ev);
+      const target = hitTest(pt.x, pt.y);
+      const moved = Math.hypot(ev.clientX - pointer.startX, ev.clientY - pointer.startY);
+      const current = pointer;
+      clearPointer();
+
+      if (current.mode === "first-drag" && current.hit) {
+        opts.onFirst(current.hit, moved <= TAP_MOVE_PX ? null : target || null);
+        return;
+      }
+      if (current.mode === "rotate") {
+        velRY = current.dragVX * sensitivity;
+        velRX = current.dragVY * sensitivity;
+        return;
+      }
+      if (current.mode === "press" && current.hit && moved <= TAP_MOVE_PX) {
+        opts.onPick(current.hit);
+      }
+    }
+
+    function onResize() {
+      resize();
+    }
+
+    resize();
+    canvas.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointermove", onPointerMove, { passive: false });
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("resize", onResize);
+    raf = requestAnimationFrame(frame);
+
+    return {
+      setSelected(id) {
+        selectedKey = id;
+      },
+      flashMiss(id) {
+        missKey = id;
+        setTimeout(() => {
+          if (missKey === id) missKey = 0;
+        }, 420);
+      },
+      destroy() {
+        running = false;
+        cancelAnimationFrame(raf);
+        clearPointer();
+        if (speedRing) speedRing.classList.remove("on");
+        canvas.removeEventListener("pointerdown", onPointerDown);
+        window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("pointerup", onPointerUp);
+        window.removeEventListener("resize", onResize);
+      },
+    };
   }
 
   function deviceId() {
@@ -654,107 +988,33 @@
     bucket = d.bucket;
 
     const layout = displayLayout(d.options.length, bucket, "1");
-    grid.textContent = "";
-    layout.forEach((optionIndex, cellIndex) => {
+    const items = layout.map((optionIndex, cellIndex) => {
       const e = d.options[optionIndex];
-      const pos = cellIndex + 1;
-      const cell = document.createElement("div");
-      cell.className = "cell";
-      cell.dataset.pos = String(pos);
-      setGlobeSlot(cell, cellIndex, layout.length, 0);
-
-      const tag = document.createElement("span");
-      tag.className = "cell-tag";
-      tag.textContent = coord(pos);
-
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "emoji-btn drag";
-      b.textContent = e.symbol;
-      b.dataset.id = String(e.id);
-      b.dataset.tapPos = String(optionIndex + 1);
-      b.addEventListener("pointerdown", (ev) => startDrag(ev, b));
-
-      cell.appendChild(tag);
-      cell.appendChild(b);
-      grid.appendChild(cell);
+      return {
+        id: e.id,
+        symbol: e.symbol,
+        tapPos: optionIndex + 1,
+        pos: cellIndex + 1,
+        slot: cellIndex,
+      };
     });
+    renderEmojiGlobe(items, 0, true);
     revealGrid(true, 0);
   }
 
-  function startDrag(ev, btn) {
-    if (busy) return;
-    ev.preventDefault();
-    try {
-      btn.setPointerCapture(ev.pointerId);
-    } catch {}
-    cleanupDrag();
-
-    const ghost = document.createElement("div");
-    ghost.className = "drag-ghost";
-    ghost.textContent = btn.textContent;
-    document.body.appendChild(ghost);
-
-    drag = {
-      id: Number(btn.dataset.id),
-      tapPos: Number(btn.dataset.tapPos || btn.closest("[data-pos]").dataset.pos),
-      glyph: btn.textContent,
-      btn,
-      ghost,
-      startX: ev.clientX,
-      startY: ev.clientY,
-    };
-    grid.classList.add("dragging");
-    moveGhost(ev.clientX, ev.clientY);
-    window.addEventListener("pointermove", onMove, { passive: false });
-    window.addEventListener("pointerup", onUp, { once: true });
-  }
-
-  function moveGhost(x, y) {
-    if (!drag) return;
-    drag.ghost.style.left = x + "px";
-    drag.ghost.style.top = y + "px";
-  }
-
-  function cellUnder(x, y) {
-    const el = document.elementFromPoint(x, y);
-    return el && el.closest ? el.closest("[data-pos]") : null;
-  }
-
-  function onMove(ev) {
-    if (!drag) return;
-    ev.preventDefault();
-    moveGhost(ev.clientX, ev.clientY);
-    const cell = cellUnder(ev.clientX, ev.clientY);
-    grid.querySelectorAll(".cell").forEach((c) => c.classList.toggle("drop-hover", c === cell));
-  }
-
-  function onUp(ev) {
-    window.removeEventListener("pointermove", onMove);
-    const cell = cellUnder(ev.clientX, ev.clientY);
-    const d = drag;
-    cleanupDrag();
-    if (!d || !cell) return;
-    const moved = Math.hypot(ev.clientX - d.startX, ev.clientY - d.startY);
-    commitFirst(d.id, moved <= TAP_MOVE_PX ? d.tapPos : Number(cell.dataset.pos), d.glyph, d.btn);
-  }
-
   function cleanupDrag() {
-    window.removeEventListener("pointermove", onMove);
-    if (drag && drag.ghost && drag.ghost.parentNode) drag.ghost.parentNode.removeChild(drag.ghost);
-    drag = null;
     grid.classList.remove("dragging");
-    grid.querySelectorAll(".drop-hover").forEach((c) => c.classList.remove("drop-hover"));
   }
 
   function flashWrong(btn, text) {
     if (nearbyText) nearbyText.textContent = text;
     clearTimeout(wrongTimer);
     grid.classList.add("pair-wrong");
-    if (btn) btn.classList.add("miss");
+    if (activeGlobe && btn && Number.isInteger(btn.globeKey)) activeGlobe.flashMiss(btn.globeKey);
+    if (btn && btn.classList) btn.classList.add("miss");
     wrongTimer = setTimeout(() => {
       grid.classList.remove("pair-wrong");
-      if (btn) btn.classList.remove("miss");
+      if (btn && btn.classList) btn.classList.remove("miss");
     }, 420);
   }
 
@@ -767,6 +1027,7 @@
     glyphs = [glyph];
     ids = [];
     busy = false;
+    if (activeGlobe && btn && Number.isInteger(btn.globeKey)) activeGlobe.setSelected(btn.globeKey);
     renderGuideSequence();
     step();
   }
@@ -806,7 +1067,9 @@
     if (d.complete) {
       const cb = done;
       done = null;
+      destroyGlobe();
       grid.className = "grid";
+      grid.textContent = "";
       const finalSelection = activeGuide
         ? { first: activeGuide.first, rest: activeGuide.rest.slice(), bucket: activeGuide.bucket, expectPeer: true }
         : { first, rest: ids.slice(), bucket };
@@ -822,27 +1085,17 @@
     }
 
     const layout = displayLayout(d.options.length, bucket, `${first.id}.${first.pos}:${ids.join(",")}`);
-    grid.textContent = "";
-    layout.forEach((optionIndex, cellIndex) => {
+    const items = layout.map((optionIndex, cellIndex) => {
       const e = d.options[optionIndex];
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "emoji-btn";
-      b.textContent = e.symbol;
-      b.dataset.id = String(e.id);
-      setGlobeSlot(b, cellIndex, layout.length, level);
-      b.addEventListener("pointerdown", (ev) => {
-        ev.preventDefault();
-        b.dataset.tapAt = String(Date.now());
-        pick(e, b);
-      });
-      b.addEventListener("click", () => {
-        const tapAt = Number(b.dataset.tapAt || 0);
-        if (Date.now() - tapAt < 700) return;
-        pick(e, b);
-      });
-      grid.appendChild(b);
+      return {
+        id: e.id,
+        symbol: e.symbol,
+        tapPos: optionIndex + 1,
+        pos: cellIndex + 1,
+        slot: cellIndex,
+      };
     });
+    renderEmojiGlobe(items, level, false);
     revealGrid(false, level);
   }
 
@@ -853,10 +1106,8 @@
       return;
     }
     busy = true;
-    btn.classList.add("sel");
-    grid.querySelectorAll(".emoji-btn").forEach((x) => {
-      if (x !== btn) x.classList.add("lock");
-    });
+    if (activeGlobe && btn && Number.isInteger(btn.globeKey)) activeGlobe.setSelected(btn.globeKey);
+    if (btn && btn.classList) btn.classList.add("sel");
     ids.push(e.id);
     glyphs.push(e.symbol);
     renderGuideSequence();
@@ -890,6 +1141,7 @@
     activeInviteId = "";
     nearbyDrafts.clear();
     if (grid) {
+      destroyGlobe();
       grid.className = "grid";
       grid.textContent = "";
     }
@@ -911,6 +1163,7 @@
   }
 
   function showGridError(text) {
+    destroyGlobe();
     grid.className = "grid";
     const p = document.createElement("p");
     p.className = "hint bad";
