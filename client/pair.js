@@ -234,7 +234,7 @@
       const rect = canvas.getBoundingClientRect();
       width = Math.max(240, rect.width || 280);
       height = Math.max(240, rect.height || width);
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = 1;
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -376,17 +376,18 @@
 
     function frame() {
       if (!running) return;
-      raf = requestAnimationFrame(frame);
-      const spinBoosting = !reduceMotion && !pointer && performance.now() < spinBoostUntil;
+      raf = 0;
+      const now = performance.now();
+      const spinBoosting = !reduceMotion && !pointer && now < spinBoostUntil;
+      const hasMomentum = !reduceMotion && !pointer && Math.abs(velRY) > 0.0003;
       if (!reduceMotion && !pointer) {
         if (spinBoosting) {
           ry += 0.155 + level * 0.012;
           velRY *= 0.86;
-        } else if (Math.abs(velRY) > 0.0003) {
+        } else if (hasMomentum) {
           ry += velRY;
           velRY *= friction;
         } else {
-          ry += 0.0019 + level * 0.00035;
           velRY = 0;
         }
       }
@@ -411,6 +412,13 @@
       });
       slots.forEach((slot, order) => drawEmojiSlot(slot, cx, cy, radius, order));
       ctx.globalAlpha = 1;
+
+      if (running && (spinBoosting || Math.abs(velRY) > 0.0003 || pointer)) requestFrame();
+    }
+
+    function requestFrame() {
+      if (!running || raf) return;
+      raf = requestAnimationFrame(frame);
     }
 
     function localPoint(ev) {
@@ -465,6 +473,7 @@
       pointer.prevX = ev.clientX;
       pointer.prevY = ev.clientY;
       ry += dx * sensitivity;
+      requestFrame();
     }
 
     function onPointerDown(ev) {
@@ -528,6 +537,7 @@
           return;
         }
         velRY = current.dragVX * sensitivity;
+        requestFrame();
         return;
       }
 
@@ -541,7 +551,10 @@
         return;
       }
 
-      if (current.mode === "rotate") velRY = current.dragVX * sensitivity;
+      if (current.mode === "rotate") {
+        velRY = current.dragVX * sensitivity;
+        requestFrame();
+      }
     }
 
     function onPointerCancel() {
@@ -550,15 +563,17 @@
 
     function onResize() {
       resize();
+      requestFrame();
     }
 
     resize();
+    if (!mojiEarthReady) earth.addEventListener("load", requestFrame, { once: true });
     canvas.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("pointermove", onPointerMove, { passive: false });
     window.addEventListener("pointerup", onPointerUp);
     window.addEventListener("pointercancel", onPointerCancel);
     window.addEventListener("resize", onResize);
-    raf = requestAnimationFrame(frame);
+    requestFrame();
 
     return {
       setSelected(key) {
@@ -566,8 +581,12 @@
       },
       flashMiss(key) {
         missKey = key;
+        requestFrame();
         setTimeout(() => {
-          if (missKey === key) missKey = 0;
+          if (missKey === key) {
+            missKey = 0;
+            requestFrame();
+          }
         }, 420);
       },
       spinTransition() {
@@ -576,6 +595,7 @@
         velRY = Math.max(Math.abs(velRY), 0.055);
         if (speedRing) speedRing.classList.add("on");
         ringOn = true;
+        requestFrame();
       },
       destroy() {
         running = false;
