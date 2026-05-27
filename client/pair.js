@@ -14,8 +14,9 @@
   const NEARBY_INTERVAL_MS = 5000;
   const MANUAL_HINT_AFTER_MS = 11000;
   const DEVICE_FRESH_MS = 15000;
-  const LEVEL_TRANSITION_DELAY_MS = 320;
-  const GLOBE_TRANSITION_SPIN_MS = 760;
+  const LEVEL_TRANSITION_DELAY_MS = 360;
+  const GLOBE_TRANSITION_SPIN_MS = 900;
+  const GLOBE_TRANSITION_FRAME_MS = 64;
 
   let first = null;
   let ids = [];
@@ -229,6 +230,7 @@
     let ry = level * 1.16;
     let velRY = 0;
     let raf = 0;
+    let frameTimer = 0;
     let running = true;
     let selectedKey = 0;
     let missKey = 0;
@@ -242,13 +244,13 @@
 
     function buildSlotAnchors(total) {
       if (total <= 0) return [];
-      const innerCount = total > 7 ? Math.min(5, Math.max(3, Math.floor(total * 0.42))) : 0;
+      const innerCount = total > 7 ? Math.min(4, Math.max(3, Math.floor(total * 0.36))) : 0;
       const plans = innerCount
         ? [
-            { count: innerCount, spread: 0.55, phase: -0.34 },
-            { count: total - innerCount, spread: 0.88, phase: 0.18 },
+            { count: innerCount, spread: 0.62, phase: -0.34 },
+            { count: total - innerCount, spread: 0.96, phase: 0.18 },
           ]
-        : [{ count: total, spread: total <= 4 ? 0.6 : 0.78, phase: -0.12 }];
+        : [{ count: total, spread: total <= 4 ? 0.66 : 0.86, phase: -0.12 }];
       const out = [];
       for (const plan of plans) {
         for (let i = 0; i < plan.count; i++) {
@@ -361,7 +363,7 @@
     }
 
     function layoutEmojiSlots(cx, cy, radius) {
-      const orbit = radius * 0.82;
+      const orbit = radius * 0.86;
       hitSlots.length = 0;
       slots.forEach((slot) => {
         const angle = slot.angle + ry * 0.55;
@@ -382,7 +384,7 @@
         slot.visible = true;
       });
 
-      for (let pass = 0; pass < 5; pass++) {
+      for (let pass = 0; pass < 7; pass++) {
         for (let i = 0; i < slots.length; i++) {
           const a = slots[i];
           for (let j = i + 1; j < slots.length; j++) {
@@ -390,7 +392,7 @@
             const dx = b.x - a.x;
             const dy = b.y - a.y;
             const distance = Math.hypot(dx, dy) || 1;
-            const minDistance = a.drawSize * 0.44 + b.drawSize * 0.44 + radius * 0.025;
+            const minDistance = a.drawSize * 0.5 + b.drawSize * 0.5 + radius * 0.035;
             if (distance >= minDistance) continue;
             const push = (minDistance - distance) * 0.5;
             const ux = dx / distance;
@@ -406,7 +408,7 @@
           const dx = slot.x - cx;
           const dy = slot.y - cy;
           const distance = Math.hypot(dx, dy);
-          const edge = Math.max(radius * 0.42, radius * 0.96 - slot.drawSize * 0.55);
+          const edge = Math.max(radius * 0.46, radius * 0.98 - slot.drawSize * 0.52);
           if (distance <= edge) return;
           const scale = edge / Math.max(1, distance);
           slot.x = cx + dx * scale;
@@ -473,7 +475,7 @@
       const hasMomentum = !reduceMotion && !pointer && Math.abs(velRY) > 0.0003;
       if (!reduceMotion && !pointer) {
         if (spinBoosting) {
-          ry += 0.095 + level * 0.008;
+          ry += 0.073 + level * 0.006;
           velRY *= 0.86;
         } else if (hasMomentum) {
           ry += velRY;
@@ -501,11 +503,25 @@
       slots.slice().sort((a, b) => a.depth - b.depth).forEach((slot) => drawEmojiSlot(slot, now));
       ctx.globalAlpha = 1;
 
-      if (running && (spinBoosting || Math.abs(velRY) > 0.0003 || pointer)) requestFrame();
+      if (running && (spinBoosting || Math.abs(velRY) > 0.0003 || pointer)) requestFrame(spinBoosting && !pointer ? GLOBE_TRANSITION_FRAME_MS : 0);
     }
 
-    function requestFrame() {
-      if (!running || raf) return;
+    function requestFrame(delay = 0) {
+      if (!running) return;
+      if (delay > 0) {
+        if (raf || frameTimer) return;
+        frameTimer = setTimeout(() => {
+          frameTimer = 0;
+          if (!running || raf) return;
+          raf = requestAnimationFrame(frame);
+        }, delay);
+        return;
+      }
+      if (frameTimer) {
+        clearTimeout(frameTimer);
+        frameTimer = 0;
+      }
+      if (raf) return;
       raf = requestAnimationFrame(frame);
     }
 
@@ -688,6 +704,7 @@
       destroy() {
         running = false;
         cancelAnimationFrame(raf);
+        clearTimeout(frameTimer);
         clearPointer();
         if (speedRing) speedRing.classList.remove("on");
         canvas.removeEventListener("pointerdown", onPointerDown);
