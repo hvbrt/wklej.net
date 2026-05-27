@@ -129,9 +129,33 @@
     transitionTimer = setTimeout(() => grid.classList.remove("grid-enter"), 680);
   }
 
-  function setStagger(el, index) {
+  function setGlobeSlot(el, index, total, level) {
+    const safeTotal = Math.max(1, total);
+    const golden = Math.PI * (3 - Math.sqrt(5));
+    const y = 1 - ((index + 0.5) / safeTotal) * 2;
+    const ring = Math.sqrt(Math.max(0, 1 - y * y));
+    const theta = golden * index + level * 0.92;
+    let x = Math.cos(theta) * ring;
+    let z = Math.sin(theta) * ring;
+
+    const tilt = -0.22 + level * 0.16;
+    const cos = Math.cos(tilt);
+    const sin = Math.sin(tilt);
+    const tiltedY = y * cos - z * sin;
+    z = y * sin + z * cos;
+
+    const depth = (z + 1) / 2;
+    const scale = 0.68 + depth * 0.46;
+    const alpha = 0.42 + depth * 0.58;
+
     el.style.setProperty("--i", String(index));
-    el.style.setProperty("--cell-dx", `${((index % 4) - 1.5) * 7}px`);
+    el.style.setProperty("--gx", `${(x * (106 + depth * 16)).toFixed(2)}px`);
+    el.style.setProperty("--gy", `${(tiltedY * 94 - z * 10).toFixed(2)}px`);
+    el.style.setProperty("--gz", `${(z * 78).toFixed(2)}px`);
+    el.style.setProperty("--gs", scale.toFixed(3));
+    el.style.setProperty("--ga", alpha.toFixed(3));
+    el.style.setProperty("--zi", String(Math.round(depth * 1000) + index));
+    el.style.setProperty("--cell-dx", `${((index % 4) - 1.5) * 14}px`);
   }
 
   function deviceId() {
@@ -637,7 +661,7 @@
       const cell = document.createElement("div");
       cell.className = "cell";
       cell.dataset.pos = String(pos);
-      setStagger(cell, cellIndex);
+      setGlobeSlot(cell, cellIndex, layout.length, 0);
 
       const tag = document.createElement("span");
       tag.className = "cell-tag";
@@ -806,7 +830,7 @@
       b.className = "emoji-btn";
       b.textContent = e.symbol;
       b.dataset.id = String(e.id);
-      setStagger(b, cellIndex);
+      setGlobeSlot(b, cellIndex, layout.length, level);
       b.addEventListener("pointerdown", (ev) => {
         ev.preventDefault();
         b.dataset.tapAt = String(Date.now());

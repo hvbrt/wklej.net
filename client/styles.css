@@ -392,15 +392,14 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 
 .grid {
   position: relative;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin: 12px -2px 8px;
-  min-height: 218px;
+  --slot-size: 66px;
+  display: block;
+  margin: 10px -2px 8px;
+  min-height: 260px;
   transition: opacity .16s, transform .16s, filter .16s;
   contain: layout paint;
   isolation: isolate;
-  perspective: 720px;
+  perspective: 860px;
   transform-style: preserve-3d;
 }
 .grid::before,
@@ -427,7 +426,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
     0 22px 54px -42px rgba(109,94,252,.78);
 }
 .grid::after {
-  opacity: .2;
+  opacity: .34;
   background:
     radial-gradient(ellipse at center, transparent 0 41%, rgba(255,255,255,.48) 42%, transparent 43%),
     repeating-radial-gradient(ellipse at center, transparent 0 17px, rgba(255,255,255,.2) 18px, transparent 20px),
@@ -446,11 +445,22 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 }
 .grid > .emoji-btn,
 .grid > .cell {
-  position: relative;
-  z-index: 1;
+  position: absolute;
+  left: calc(50% + var(--gx, 0px));
+  top: calc(50% + var(--gy, 0px));
+  z-index: var(--zi, 1);
+  width: var(--slot-size);
+  height: var(--slot-size);
+  opacity: var(--ga, 1);
+  transform:
+    translate(-50%, -50%)
+    translateZ(var(--gz, 0px))
+    scale(var(--gs, 1));
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
 }
-.grid.grid-enter .emoji-btn,
-.grid.grid-enter .cell {
+.grid.grid-enter > .emoji-btn,
+.grid.grid-enter > .cell {
   animation: cell-structure-in .48s cubic-bezier(.16,1,.3,1) both;
   animation-delay: calc(var(--i, 0) * 16ms);
 }
@@ -493,35 +503,53 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 @keyframes cell-structure-in {
   0% {
     opacity: 0;
-    transform: translate3d(var(--cell-dx, 0), 18px, -62px)
+    transform:
+      translate(-50%, -50%)
+      translate3d(var(--cell-dx, 0px), 20px, -92px)
       rotateX(var(--cell-rx, -54deg))
       rotateY(var(--cell-ry, 24deg))
       rotateZ(var(--cell-rz, 6deg))
       scale(.84);
   }
   62% {
-    opacity: 1;
-    transform: translate3d(0, -2px, 14px)
+    opacity: var(--ga, 1);
+    transform:
+      translate(-50%, -50%)
+      translate3d(0, -2px, 18px)
       rotateX(2deg)
       rotateY(-2deg)
       rotateZ(0deg)
-      scale(1.025);
+      scale(var(--gs, 1))
+      scale(1.035);
   }
-  100% { opacity: 1; transform: none; }
+  100% {
+    opacity: var(--ga, 1);
+    transform:
+      translate(-50%, -50%)
+      translateZ(var(--gz, 0px))
+      scale(var(--gs, 1));
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .grid.grid-enter,
   .grid.grid-enter::before,
   .grid.grid-enter::after,
-  .grid.grid-enter .emoji-btn,
-  .grid.grid-enter .cell {
+  .grid.grid-enter > .emoji-btn,
+  .grid.grid-enter > .cell {
     animation: none;
   }
 }
 .grid.pair-wrong { animation: pair-wrong .32s cubic-bezier(.36,.07,.19,.97) both; }
 @keyframes pair-wrong { 10%, 90% { transform: translateX(-1px); } 20%, 80% { transform: translateX(2px); } 30%, 50%, 70% { transform: translateX(-4px); } 40%, 60% { transform: translateX(4px); } }
-.emoji-btn { -webkit-appearance: none; appearance: none; margin: 0; padding: 0; width: 100%; min-width: 56px; min-height: 66px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-family: var(--sans); font-size: 32px; line-height: 1; color: var(--ink); background: var(--emoji-tile); border: 1px solid var(--emoji-tile-border); border-radius: 17px; cursor: pointer; overflow: visible; white-space: nowrap; user-select: none; -webkit-user-select: none; touch-action: manipulation; box-shadow: var(--emoji-tile-shadow); transition: transform .1s, background .15s, opacity .12s, box-shadow .15s, border-color .15s; transform-style: preserve-3d; backface-visibility: hidden; }
-.emoji-btn:active { transform: scale(0.95); }
+.emoji-btn { -webkit-appearance: none; appearance: none; margin: 0; padding: 0; width: 100%; min-width: 56px; min-height: 66px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-family: var(--sans); font-size: 32px; line-height: 1; color: var(--ink); background: var(--emoji-tile); border: 1px solid var(--emoji-tile-border); border-radius: 999px; cursor: pointer; overflow: visible; white-space: nowrap; user-select: none; -webkit-user-select: none; touch-action: manipulation; box-shadow: var(--emoji-tile-shadow); transition: transform .1s, background .15s, opacity .12s, box-shadow .15s, border-color .15s; transform-style: preserve-3d; backface-visibility: hidden; }
+.grid .cell .emoji-btn:active { transform: scale(0.95); }
+.grid > .emoji-btn:active {
+  transform:
+    translate(-50%, -50%)
+    translateZ(var(--gz, 0px))
+    scale(var(--gs, 1))
+    scale(.95);
+}
 .emoji-btn.sel { border-color: rgba(109,94,252,.18); background: linear-gradient(145deg, var(--emoji-tile-active), rgba(255,255,255,.12)); box-shadow: inset 0 1px 0 rgba(255,255,255,.32), 0 12px 26px -22px rgba(109,94,252,.72); }
 .emoji-btn.miss { border-color: rgba(239,68,68,.18); background: linear-gradient(145deg, var(--emoji-tile-bad), rgba(255,255,255,.1)); box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 12px 26px -22px rgba(239,68,68,.74); }
 .emoji-btn.lock { pointer-events: none; opacity: .45; }
@@ -537,8 +565,20 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   filter: drop-shadow(0 12px 22px rgba(109,94,252,.2));
 }
 
-.grid-move .cell { position: relative; min-height: 66px; aspect-ratio: 1 / 1; border-radius: 17px; background: var(--emoji-tile); border: 1px solid var(--emoji-tile-border); box-shadow: var(--emoji-tile-shadow); display: grid; place-items: center; transition: border-color .12s, background .12s, transform .12s, box-shadow .12s; transform-style: preserve-3d; backface-visibility: hidden; }
-.grid-move .cell.drop-hover { border-color: rgba(109,94,252,.18); background: linear-gradient(145deg, var(--emoji-tile-active), rgba(255,255,255,.12)); box-shadow: inset 0 1px 0 rgba(255,255,255,.32), 0 14px 28px -22px rgba(109,94,252,.72); transform: scale(1.035); }
+.grid-move .cell { min-height: 66px; aspect-ratio: 1 / 1; border-radius: 999px; background: var(--emoji-tile); border: 1px solid var(--emoji-tile-border); box-shadow: var(--emoji-tile-shadow); display: grid; place-items: center; transition: border-color .12s, background .12s, transform .12s, box-shadow .12s; transform-style: preserve-3d; backface-visibility: hidden; }
+.grid-move .cell.drop-hover {
+  border-color: rgba(109,94,252,.34);
+  background: linear-gradient(145deg, var(--emoji-tile-active), rgba(255,255,255,.12));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.32),
+    0 0 0 6px rgba(109,94,252,.08),
+    0 18px 34px -24px rgba(109,94,252,.82);
+  transform:
+    translate(-50%, -50%)
+    translateZ(var(--gz, 0px))
+    scale(var(--gs, 1))
+    scale(1.08);
+}
 .grid-move .cell-tag { position: absolute; top: 5px; left: 7px; font-family: var(--disp); font-size: 9px; font-weight: 700; color: var(--muted); opacity: .55; pointer-events: none; }
 .grid-move .emoji-btn.drag { height: 100%; min-height: 66px; touch-action: none; cursor: grab; }
 .grid-move.dragging .emoji-btn.drag { cursor: grabbing; }
