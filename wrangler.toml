@@ -1,0 +1,36 @@
+name = "wklej-net"
+main = "worker/index.ts"
+compatibility_date = "2025-05-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+routes = [
+  { pattern = "wklej.net", custom_domain = true },
+  { pattern = "www.wklej.net", custom_domain = true }
+]
+
+# Modern static-asset serving (no KV / no Workers Sites).
+# Worker runs first (run_worker_first) so /ws and API routes hit code,
+# everything else falls back to files in ./public.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
+
+[[durable_objects.bindings]]
+name = "ROOM"
+class_name = "DurableRoom"
+
+[[durable_objects.bindings]]
+name = "RATELIMIT"
+class_name = "RateLimit"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["DurableRoom"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["RateLimit"]
+
+[observability]
+enabled = true

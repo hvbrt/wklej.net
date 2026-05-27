@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<meta name="color-scheme" content="light dark" />
+<meta name="theme-color" content="#edf7ff" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#070b16" media="(prefers-color-scheme: dark)" />
+<title>wklej.net — ephemeral P2P</title>
+<link rel="stylesheet" href="/f680c0a8f7.css" />
+</head>
+<body>
+<div class="aurora" aria-hidden="true"></div>
+<div id="drag-overlay" class="drag-overlay" hidden><div class="drag-card">upuść pliki tutaj</div></div>
+<main class="stage">
+<section class="glass card center pairing-card" data-screen="pairing">
+<header class="brand compact">
+<h1><span class="brand-word">wklej</span><span class="logo-dot" aria-hidden="true">®</span><span class="tld">net</span></h1>
+</header>
+<div class="moji-connect" aria-label="moji connect"><span class="moji-part">moji</span><span class="connect-part">connect</span></div>
+<p class="hint pair-instructions">TAKE THREE</p>
+<div class="pair-meta">
+<span id="pair-crumb" class="pair-crumb"></span>
+<button id="pair-back" class="btn ghost tiny" type="button" hidden>wstecz</button>
+</div>
+<div id="emoji-grid" class="grid"></div>
+<div id="nearby-assist" class="nearby-assist" hidden>
+<div class="nearby-head">
+<span class="nearby-dot" aria-hidden="true"></span>
+<span id="nearby-text">nearby</span>
+</div>
+<div id="nearby-list" class="nearby-list"></div>
+<div id="nearby-invite" class="nearby-invite" hidden></div>
+</div>
+<div class="cd"><span id="cd-pair">120</span>s</div>
+<p class="legal">DIRECT P2P then RELAY</p>
+<p class="tag footer-tag">ephemeral · peer-to-peer · zero storage</p>
+</section>
+<section class="glass card center loading-card" data-screen="seed-wait" hidden>
+<div class="orb"><div class="spinner"></div></div>
+<h2>waiting</h2>
+<p class="your-pick" id="seed-label"></p>
+<div class="cd"><span id="cd-wait">120</span>s left</div>
+</section>
+<section class="glass card center loading-card" data-screen="loading" hidden>
+<div class="orb"><div class="spinner"></div></div>
+<h2 id="loading-text">connecting</h2>
+<div class="your-pick" id="your-pick"></div>
+</section>
+<section class="glass card wide" data-screen="connected" hidden>
+<header class="conn-head">
+<span id="health" class="badge ok">connected</span>
+<span id="transport" class="badge transport pending">…</span>
+<span class="grow"></span>
+<span class="cd small" id="conn-cd-wrap"><span id="cd-conn">120</span>s</span>
+</header>
+<div id="message-board" class="message-board" aria-live="polite" aria-label="P2P messages" hidden>
+<button id="copy-board" class="copy-board" type="button" title="copy messages" aria-label="copy messages">⧉</button>
+<div id="message-stream" class="message-stream"></div>
+</div>
+<div id="dropzone" class="dropzone">
+<textarea
+id="msg"
+class="editor"
+rows="1"
+aria-label="write text or drop file here - przeciagnij plik lub napisz wiadomość"
+></textarea>
+<div id="editor-placeholder" class="editor-placeholder" aria-hidden="true"></div>
+<div class="editor-bar">
+<button id="attach" class="btn icon attach-pulse" type="button" title="attach file" aria-label="attach file">📎</button>
+<input id="file-input" type="file" multiple hidden />
+<button id="counter" class="counter attach-plus is-plus" type="button" title="attach file" aria-label="attach file">+</button>
+<span class="grow"></span>
+<button id="send" class="btn primary inline send-arrow" type="button" title="send" aria-label="send">↑</button>
+</div>
+</div>
+<div id="attachments-head" class="attachments-head" hidden>
+<button id="zip-all" class="att-zip" type="button" title="download all attachments as zip" aria-label="download all attachments as zip">zip ↓</button>
+</div>
+<div id="attachments" class="attachments"></div>
+<div id="grace-modal" class="grace-modal" hidden>
+<div class="grace-card" role="dialog" aria-live="assertive" aria-labelledby="grace-title">
+<div id="grace-title" class="grace-title">session ending</div>
+<div class="grace-count"><span id="grace-count">5</span>s</div>
+<p id="grace-reason" class="grace-reason">download attachments or copy text</p>
+<div class="grace-actions">
+<button id="grace-extend" class="grace-extend" type="button">+10s</button>
+<button id="grace-end" class="grace-end" type="button">end</button>
+</div>
+</div>
+</div>
+<p class="legal session-legal">P2P</p>
+</section>
+<section class="glass card center" data-screen="ended" hidden>
+<div class="x">×</div>
+<h2 id="end-text">ended</h2>
+<button class="btn primary" data-action="restart" type="button">restart</button>
+</section>
+</main>
+<button id="page-refresh" class="page-refresh" type="button" aria-label="refresh" title="refresh" aria-live="off">↻</button>
+<template id="att-card">
+<div class="att">
+<div class="att-icon">📄</div>
+<div class="att-main">
+<div class="att-name"></div>
+<div class="att-sub"><span class="att-size"></span> · <span class="att-state"></span></div>
+<div class="att-bar"><div class="att-fill"></div></div>
+</div>
+<button class="att-action btn icon" type="button"></button>
+</div>
+</template>
+<script src="/774d4521fc.js"></script>
+</body>
+</html>
