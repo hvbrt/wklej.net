@@ -14,8 +14,8 @@
   const NEARBY_INTERVAL_MS = 5000;
   const MANUAL_HINT_AFTER_MS = 11000;
   const DEVICE_FRESH_MS = 15000;
-  const LEVEL_TRANSITION_DELAY_MS = 420;
-  const GLOBE_TRANSITION_SPIN_MS = 980;
+  const LEVEL_TRANSITION_DELAY_MS = 320;
+  const GLOBE_TRANSITION_SPIN_MS = 760;
 
   let first = null;
   let ids = [];
@@ -104,7 +104,7 @@
   function revealGrid(moveMode, level) {
     clearTimeout(transitionTimer);
     grid.className = "grid grid-enter";
-    transitionTimer = setTimeout(() => grid.classList.remove("grid-enter"), 1000);
+    transitionTimer = setTimeout(() => grid.classList.remove("grid-enter"), 820);
   }
 
   function clearGrid() {
@@ -180,8 +180,9 @@
     const sx = sprite.getContext("2d");
     sx.textAlign = "center";
     sx.textBaseline = "middle";
-    sx.shadowColor = "rgba(3,8,24,.64)";
-    sx.shadowBlur = MOJI_GLOBE_SPRITE_SIZE * 0.11;
+    sx.shadowColor = "rgba(2,6,23,.78)";
+    sx.shadowBlur = MOJI_GLOBE_SPRITE_SIZE * 0.13;
+    sx.shadowOffsetY = MOJI_GLOBE_SPRITE_SIZE * 0.018;
     sx.font = `${Math.round(MOJI_GLOBE_SPRITE_SIZE * 0.72)}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
     sx.fillText(key, MOJI_GLOBE_SPRITE_SIZE / 2, MOJI_GLOBE_SPRITE_SIZE / 2);
     mojiSpriteCache.set(key, sprite);
@@ -192,6 +193,8 @@
     const ctx = canvas.getContext("2d", { alpha: true });
     const level = opts.level || 0;
     const moveMode = !!opts.moveMode;
+    const animateEmojiEntry = !moveMode && level > 0;
+    const entryStart = performance.now();
     const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const earth = loadMojiEarth();
     const earthBlend = document.createElement("canvas");
@@ -215,6 +218,7 @@
       drawSize: 0,
       alpha: 1,
       depth: 0,
+      stagger: (index % 6) * 34 + Math.floor(index / 6) * 18,
       visible: false,
     }));
     const hitSlots = [];
@@ -413,12 +417,15 @@
       slots.forEach((slot) => hitSlots.push(slot));
     }
 
-    function drawEmojiSlot(slot) {
+    function drawEmojiSlot(slot, now) {
       const missed = missKey === slot.key;
-      const size = slot.drawSize;
+      const entryRaw = animateEmojiEntry ? (now - entryStart - slot.stagger) / 360 : 1;
+      const entry = Math.max(0, Math.min(1, entryRaw));
+      const eased = 1 - Math.pow(1 - entry, 3);
+      const size = slot.drawSize * (0.82 + eased * 0.18);
       const x = slot.x;
-      const y = slot.y;
-      const alpha = slot.alpha;
+      const y = slot.y + (1 - eased) * slot.drawSize * 0.06;
+      const alpha = slot.alpha * (0.4 + eased * 0.6);
       const radiusHit = slot.r;
 
       if (missed) {
@@ -442,6 +449,16 @@
         ctx.stroke();
         ctx.restore();
       }
+
+      const contrast = ctx.createRadialGradient(x, y + size * 0.1, size * 0.05, x, y + size * 0.12, size * 0.64);
+      contrast.addColorStop(0, "rgba(2,6,23,.30)");
+      contrast.addColorStop(0.58, "rgba(2,6,23,.16)");
+      contrast.addColorStop(1, "rgba(2,6,23,0)");
+      ctx.globalAlpha = alpha * 0.9;
+      ctx.fillStyle = contrast;
+      ctx.beginPath();
+      ctx.ellipse(x, y + size * 0.1, size * 0.55, size * 0.38, 0, 0, twoPi);
+      ctx.fill();
 
       ctx.globalAlpha = alpha;
       ctx.drawImage(mojiSprite(slot.item.symbol), x - size / 2, y - size / 2, size, size);
@@ -481,7 +498,7 @@
 
       drawEarth(cx, cy, radius);
       layoutEmojiSlots(cx, cy, radius);
-      slots.slice().sort((a, b) => a.depth - b.depth).forEach((slot) => drawEmojiSlot(slot));
+      slots.slice().sort((a, b) => a.depth - b.depth).forEach((slot) => drawEmojiSlot(slot, now));
       ctx.globalAlpha = 1;
 
       if (running && (spinBoosting || Math.abs(velRY) > 0.0003 || pointer)) requestFrame();
