@@ -2,6 +2,8 @@
 // never stored or passed here. Fixed 60s windows per action; counters auto-expire
 // via a DO Alarm (no polling, no setTimeout).
 
+import { ATLAS } from "./atlas";
+
 const WINDOW_MS = 60_000;
 const PRESENCE_TTL_MS = 30_000;
 const INVITE_TTL_MS = 45_000;
@@ -30,6 +32,7 @@ interface NearbySelection {
   first: { id: number; pos: number };
   rest: number[];
   glyphs: string[];
+  assets?: string[];
 }
 
 type NearbyInviteMode = "pair" | "send";
@@ -296,15 +299,19 @@ function isSelection(value: unknown): value is NearbySelection {
     !!v.first &&
     Number.isInteger(v.first.id) &&
     v.first.id >= 1 &&
-    v.first.id <= 1024 &&
+    v.first.id <= ATLAS.length &&
     Number.isInteger(v.first.pos) &&
     v.first.pos >= 1 &&
     v.first.pos <= 12 &&
     Array.isArray(v.rest) &&
     v.rest.length === 2 &&
-    v.rest.every((id) => Number.isInteger(id) && id >= 1 && id <= 1024) &&
+    v.rest.every((id) => Number.isInteger(id) && id >= 1 && id <= ATLAS.length) &&
     Array.isArray(v.glyphs) &&
     v.glyphs.length === 3 &&
-    v.glyphs.every((glyph) => typeof glyph === "string" && glyph.length > 0 && glyph.length <= 16)
+    v.glyphs.every((glyph) => typeof glyph === "string" && glyph.length > 0 && glyph.length <= 16) &&
+    (v.assets === undefined ||
+      (Array.isArray(v.assets) &&
+        v.assets.length === 3 &&
+        v.assets.every((asset) => typeof asset === "string" && /^\/emoji\/[0-9a-f_]+\.webp$/.test(asset))))
   );
 }

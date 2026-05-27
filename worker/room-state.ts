@@ -11,6 +11,7 @@ export interface FirstMove {
 export interface EmojiDTO {
   id: number;
   symbol: string;
+  asset: string;
 }
 
 export type SessionTheme = [string, string, string];

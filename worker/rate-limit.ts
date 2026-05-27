@@ -45,6 +45,7 @@ export interface NearbySelection {
   first: { id: number; pos: number };
   rest: number[];
   glyphs: string[];
+  assets?: string[];
 }
 
 export type NearbyInviteMode = "pair" | "send";

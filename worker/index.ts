@@ -150,6 +150,12 @@ function isNearbySelection(value: unknown): NearbyRequest["selection"] {
     first: { id: v.first.id, pos: v.first.pos },
     rest: v.rest.map((id) => Number(id)),
     glyphs: v.glyphs.map((glyph) => String(glyph)),
+    assets:
+      Array.isArray(v.assets) &&
+      v.assets.length === 3 &&
+      v.assets.every((asset) => typeof asset === "string" && /^\/emoji\/[0-9a-f_]+\.webp$/.test(asset))
+        ? v.assets.map((asset) => String(asset))
+        : undefined,
   };
 }
 
@@ -287,7 +293,11 @@ function withSecurityHeadersInit(req: Request, init: ResponseInit): ResponseInit
 
   if (url.pathname.startsWith("/api/")) {
     headers.set("Cache-Control", "no-store");
-  } else if ((init.status ?? 200) >= 200 && (init.status ?? 200) < 300 && /^\/[0-9a-f]{10}\.(?:js|css)$/.test(url.pathname)) {
+  } else if (
+    (init.status ?? 200) >= 200 &&
+    (init.status ?? 200) < 300 &&
+    (/^\/[0-9a-f]{10}\.(?:js|css)$/.test(url.pathname) || /^\/emoji\/[0-9a-f_]+\.webp$/.test(url.pathname))
+  ) {
     headers.set("Cache-Control", "public, max-age=31536000, immutable");
   } else if (url.pathname === "/" || url.pathname === "/index.html") {
     headers.set("Cache-Control", "no-cache");

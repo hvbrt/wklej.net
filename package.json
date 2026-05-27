@@ -10,7 +10,9 @@
     "build": "npm run build:public && wrangler deploy --dry-run --outdir dist",
     "build:public": "node scripts/build-public.mjs",
     "types": "wrangler types",
-    "build:atlas": "node scripts/build-atlas.mjs"
+    "build:atlas": "node scripts/build-atlas.mjs",
+    "sync:animated": "node scripts/sync-animated-emoji.mjs && npm run build:atlas",
+    "refresh:animated-manifest": "node scripts/update-animated-emoji-manifest.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260525.1",

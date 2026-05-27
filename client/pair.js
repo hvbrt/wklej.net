@@ -25,10 +25,12 @@
   const LEVEL_TRANSITION_DELAY_MS = 330;
   const GLOBE_TRANSITION_SPIN_MS = 740;
   const GLOBE_TRANSITION_FRAME_MS = 16;
+  const ANIMATED_EMOJI_FRAME_MS = 80;
 
   let first = null;
   let ids = [];
   let glyphs = [];
+  let pickedAssets = [];
   let bucket = null;
   let done = null;
   let busy = false;
@@ -99,7 +101,23 @@
   }
 
   function renderCrumb() {
-    if (crumb) crumb.textContent = glyphs.length ? glyphs.join("  ") : "";
+    if (crumb) {
+      crumb.textContent = "";
+      glyphs.forEach((glyph, index) => {
+        const asset = pickedAssets[index];
+        const el = asset ? document.createElement("img") : document.createElement("span");
+        el.className = asset ? "pair-crumb-emoji" : "pair-crumb-glyph";
+        if (asset) {
+          el.src = asset;
+          el.alt = glyph;
+          el.loading = "lazy";
+          el.decoding = "async";
+        } else {
+          el.textContent = glyph;
+        }
+        crumb.appendChild(el);
+      });
+    }
     if (pairMeta) pairMeta.hidden = glyphs.length === 0;
     if (backBtn) backBtn.hidden = !first;
   }
@@ -131,8 +149,7 @@
   const MOJI_GLOBE_FRAME_SIZE = 240;
   const MOJI_GLOBE_FRAME_COLS = 8;
   const MOJI_GLOBE_FRAME_COUNT = 48;
-  const MOJI_GLOBE_SPRITE_SIZE = 112;
-  const mojiSpriteCache = new Map();
+  const animatedEmojiCache = new Map();
   let mojiEarthImage = null;
   let mojiEarthReady = false;
 
@@ -160,9 +177,9 @@
       moveMode,
       onFirst: (hit, target) => {
         const pos = target ? target.item.pos : hit.item.tapPos;
-        commitFirst(hit.item.id, pos, hit.item.symbol, { globeKey: hit.key, globeId: hit.item.id });
+        commitFirst(hit.item.id, pos, hit.item.symbol, hit.item.asset, { globeKey: hit.key, globeId: hit.item.id });
       },
-      onPick: (hit) => pick({ id: hit.item.id, symbol: hit.item.symbol }, { globeKey: hit.key, globeId: hit.item.id }),
+      onPick: (hit) => pick({ id: hit.item.id, symbol: hit.item.symbol, asset: hit.item.asset }, { globeKey: hit.key, globeId: hit.item.id }),
       onRoomSwipe: showNameRoomModal,
     });
     if (!moveMode && level > 0 && typeof activeGlobe.spinTransition === "function") activeGlobe.spinTransition();
@@ -179,24 +196,26 @@
     return mojiEarthImage;
   }
 
-  function mojiSprite(symbol) {
-    const key = String(symbol || "");
-    const cached = mojiSpriteCache.get(key);
-    if (cached) return cached;
+  function animatedEmojiImage(item, onReady) {
+    const src = item && typeof item.asset === "string" ? item.asset : "";
+    if (!src) return null;
+    const cached = animatedEmojiCache.get(src);
+    if (cached) return cached.ready ? cached.img : null;
 
-    const sprite = document.createElement("canvas");
-    sprite.width = MOJI_GLOBE_SPRITE_SIZE;
-    sprite.height = MOJI_GLOBE_SPRITE_SIZE;
-    const sx = sprite.getContext("2d");
-    sx.textAlign = "center";
-    sx.textBaseline = "middle";
-    sx.shadowColor = "rgba(1,4,18,.9)";
-    sx.shadowBlur = MOJI_GLOBE_SPRITE_SIZE * 0.15;
-    sx.shadowOffsetY = MOJI_GLOBE_SPRITE_SIZE * 0.025;
-    sx.font = `${Math.round(MOJI_GLOBE_SPRITE_SIZE * 0.72)}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
-    sx.fillText(key, MOJI_GLOBE_SPRITE_SIZE / 2, MOJI_GLOBE_SPRITE_SIZE / 2);
-    mojiSpriteCache.set(key, sprite);
-    return sprite;
+    const img = new Image();
+    const state = { img, ready: false, failed: false };
+    animatedEmojiCache.set(src, state);
+    img.decoding = "async";
+    img.loading = "eager";
+    img.onload = () => {
+      state.ready = true;
+      if (typeof onReady === "function") onReady();
+    };
+    img.onerror = () => {
+      state.failed = true;
+    };
+    img.src = src;
+    return null;
   }
 
   function createEmojiGlobe(canvas, speedRing, items, opts) {
@@ -212,6 +231,7 @@
     earthBlend.height = MOJI_GLOBE_FRAME_SIZE;
     const earthCtx = earthBlend.getContext("2d");
     const sourceItems = items.slice();
+    const animateAssets = !reduceMotion && sourceItems.some((item) => item && item.asset);
     const count = sourceItems.length;
     const twoPi = Math.PI * 2;
     const anchors = buildSlotAnchors(count);
@@ -478,8 +498,23 @@
       ctx.ellipse(x, y + size * 0.1, size * 0.55, size * 0.38, 0, 0, twoPi);
       ctx.fill();
 
-      ctx.globalAlpha = alpha;
-      ctx.drawImage(mojiSprite(slot.item.symbol), x - size / 2, y - size / 2, size, size);
+      const img = animatedEmojiImage(slot.item, requestFrame);
+      if (img) {
+        ctx.globalAlpha = alpha;
+        ctx.filter = "drop-shadow(0 10px 14px rgba(1,4,18,.34)) saturate(1.22) contrast(1.08)";
+        ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
+        ctx.filter = "none";
+      } else {
+        const loading = ctx.createRadialGradient(x, y, size * 0.08, x, y, size * 0.5);
+        loading.addColorStop(0, "rgba(255,255,255,.30)");
+        loading.addColorStop(0.72, "rgba(255,255,255,.08)");
+        loading.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.globalAlpha = alpha * 0.8;
+        ctx.fillStyle = loading;
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.34, 0, twoPi);
+        ctx.fill();
+      }
       ctx.globalAlpha = 1;
     }
 
@@ -519,7 +554,7 @@
       slots.slice().sort((a, b) => a.depth - b.depth).forEach((slot) => drawEmojiSlot(slot, now));
       ctx.globalAlpha = 1;
 
-      if (running && (spinBoosting || Math.abs(velRY) > 0.0003 || pointer)) requestFrame(spinBoosting && !pointer ? GLOBE_TRANSITION_FRAME_MS : 0);
+      if (running && (spinBoosting || Math.abs(velRY) > 0.0003 || pointer || animateAssets)) requestFrame(spinBoosting && !pointer ? GLOBE_TRANSITION_FRAME_MS : animateAssets ? ANIMATED_EMOJI_FRAME_MS : 0);
     }
 
     function requestFrame(delay = 0) {
@@ -841,8 +876,8 @@
       });
 
       const avatar = document.createElement("div");
-      avatar.className = "nearby-avatar";
-      avatar.textContent = kind === "phone" ? "📱" : "💻";
+      avatar.className = `nearby-avatar nearby-avatar-${kind === "phone" ? "phone" : "computer"}`;
+      avatar.setAttribute("aria-hidden", "true");
 
       const main = document.createElement("div");
       main.className = "nearby-main";
@@ -1063,7 +1098,7 @@
     sub.textContent = "take these emoji";
     const seqEl = document.createElement("div");
     seqEl.className = "nearby-seq";
-    fillSequence(seqEl, activeGuide.glyphs, 0);
+    fillSequence(seqEl, activeGuide.glyphs, 0, activeGuide.assets);
     main.appendChild(name);
     main.appendChild(sub);
     main.appendChild(seqEl);
@@ -1101,14 +1136,32 @@
     return Math.min(ids.length + 1, activeGuide.glyphs.length - 1);
   }
 
-  function fillSequence(el, items, activeIndex) {
+  function fillSequence(el, items, activeIndex, assets) {
     el.textContent = "";
     items.forEach((glyph, index) => {
       const item = document.createElement("span");
       item.className = "nearby-seq-item";
       if (index < activeIndex) item.classList.add("done");
       if (index === activeIndex) item.classList.add("active");
-      item.textContent = `${index + 1}. ${glyph}`;
+      const asset = Array.isArray(assets) ? assets[index] : "";
+      const step = document.createElement("span");
+      step.className = "nearby-seq-step";
+      step.textContent = String(index + 1) + ".";
+      item.appendChild(step);
+      if (asset) {
+        const img = document.createElement("img");
+        img.className = "nearby-seq-emoji";
+        img.src = asset;
+        img.alt = glyph;
+        img.loading = "lazy";
+        img.decoding = "async";
+        item.appendChild(img);
+      } else {
+        const fallback = document.createElement("span");
+        fallback.className = "nearby-seq-glyph";
+        fallback.textContent = glyph;
+        item.appendChild(fallback);
+      }
       el.appendChild(item);
     });
   }
@@ -1116,7 +1169,7 @@
   function renderGuideSequence() {
     if (!activeGuide || !nearbyInvite) return;
     const seqEl = nearbyInvite.querySelector(".nearby-seq");
-    if (seqEl) fillSequence(seqEl, activeGuide.glyphs, guideIndex());
+    if (seqEl) fillSequence(seqEl, activeGuide.glyphs, guideIndex(), activeGuide.assets);
   }
 
   function isInviteSelection(value) {
@@ -1129,7 +1182,8 @@
       Array.isArray(value.rest) &&
       value.rest.length === 2 &&
       Array.isArray(value.glyphs) &&
-      value.glyphs.length === 3
+      value.glyphs.length === 3 &&
+      (value.assets === undefined || (Array.isArray(value.assets) && value.assets.length === 3))
     );
   }
 
@@ -1232,6 +1286,7 @@
       rest: [secondEmoji.id, thirdEmoji.id],
       bucket: firstLevel.bucket,
       glyphs: [firstEmoji.symbol, secondEmoji.symbol, thirdEmoji.symbol],
+      assets: [firstEmoji.asset, secondEmoji.asset, thirdEmoji.asset],
     };
   }
 
@@ -1240,6 +1295,7 @@
     first = null;
     ids = [];
     glyphs = [];
+    pickedAssets = [];
     bucket = null;
     renderCrumb();
     prepareGrid(true, 0);
@@ -1265,6 +1321,7 @@
       return {
         id: e.id,
         symbol: e.symbol,
+        asset: e.asset,
         tapPos: optionIndex + 1,
         pos: cellIndex + 1,
         slot: cellIndex,
@@ -1286,13 +1343,14 @@
     }, 420);
   }
 
-  function commitFirst(id, pos, glyph, btn) {
+  function commitFirst(id, pos, glyph, asset, btn) {
     if (activeGuide && (id !== activeGuide.first.id || pos !== activeGuide.first.pos)) {
       flashWrong(btn, `kliknij 1. ${activeGuide.glyphs[0]}`);
       return;
     }
     first = { id, pos };
     glyphs = [glyph];
+    pickedAssets = [asset || ""];
     ids = [];
     busy = true;
     if (activeGlobe && btn && Number.isInteger(btn.globeKey)) activeGlobe.setSelected(btn.globeKey);
@@ -1363,6 +1421,7 @@
       return {
         id: e.id,
         symbol: e.symbol,
+        asset: e.asset,
         tapPos: optionIndex + 1,
         pos: cellIndex + 1,
         slot: cellIndex,
@@ -1384,6 +1443,7 @@
     if (btn && btn.classList) btn.classList.add("sel");
     ids.push(e.id);
     glyphs.push(e.symbol);
+    pickedAssets.push(e.asset || "");
     renderCrumb();
     renderGuideSequence();
     setTimeout(() => {
@@ -1397,6 +1457,7 @@
     if (ids.length > 0) {
       ids.pop();
       glyphs.pop();
+      pickedAssets.pop();
       step();
     } else if (first) {
       renderPalette();
@@ -1408,6 +1469,7 @@
     first = null;
     ids = [];
     glyphs = [];
+    pickedAssets = [];
     bucket = null;
     done = null;
     busy = false;

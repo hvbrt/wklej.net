@@ -70,7 +70,7 @@ async function options(bucket: number, prefix: string, pepper: string): Promise<
     const key = visualKey(item.symbol);
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push({ id: item.id, symbol: item.symbol });
+    out.push({ id: item.id, symbol: item.symbol, asset: item.asset });
     if (out.length === TREE_OPTIONS) return out;
   }
   throw new Error("atlas does not contain enough unique visible emoji");
