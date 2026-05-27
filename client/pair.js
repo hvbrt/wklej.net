@@ -14,6 +14,8 @@
   const NEARBY_INTERVAL_MS = 5000;
   const MANUAL_HINT_AFTER_MS = 11000;
   const DEVICE_FRESH_MS = 15000;
+  const LEVEL_TRANSITION_DELAY_MS = 420;
+  const GLOBE_TRANSITION_SPIN_MS = 980;
 
   let first = null;
   let ids = [];
@@ -102,7 +104,7 @@
   function revealGrid(moveMode, level) {
     clearTimeout(transitionTimer);
     grid.className = "grid grid-enter";
-    transitionTimer = setTimeout(() => grid.classList.remove("grid-enter"), 680);
+    transitionTimer = setTimeout(() => grid.classList.remove("grid-enter"), 1000);
   }
 
   function clearGrid() {
@@ -153,6 +155,7 @@
       },
       onPick: (hit) => pick({ id: hit.item.id, symbol: hit.item.symbol }, { globeKey: hit.key, globeId: hit.item.id }),
     });
+    if (!moveMode && level > 0 && typeof activeGlobe.spinTransition === "function") activeGlobe.spinTransition();
   }
 
   function loadMojiEarth() {
@@ -453,7 +456,7 @@
       const hasMomentum = !reduceMotion && !pointer && Math.abs(velRY) > 0.0003;
       if (!reduceMotion && !pointer) {
         if (spinBoosting) {
-          ry += 0.155 + level * 0.012;
+          ry += 0.095 + level * 0.008;
           velRY *= 0.86;
         } else if (hasMomentum) {
           ry += velRY;
@@ -659,7 +662,7 @@
       },
       spinTransition() {
         if (reduceMotion) return;
-        spinBoostUntil = Math.max(spinBoostUntil, performance.now() + 520);
+        spinBoostUntil = Math.max(spinBoostUntil, performance.now() + GLOBE_TRANSITION_SPIN_MS);
         velRY = Math.max(Math.abs(velRY), 0.055);
         if (speedRing) speedRing.classList.add("on");
         ringOn = true;
@@ -1213,11 +1216,15 @@
     first = { id, pos };
     glyphs = [glyph];
     ids = [];
-    busy = false;
+    busy = true;
     if (activeGlobe && btn && Number.isInteger(btn.globeKey)) activeGlobe.setSelected(btn.globeKey);
     if (activeGlobe && typeof activeGlobe.spinTransition === "function") activeGlobe.spinTransition();
+    renderCrumb();
     renderGuideSequence();
-    step();
+    setTimeout(() => {
+      busy = false;
+      step();
+    }, LEVEL_TRANSITION_DELAY_MS);
   }
 
   function fetchLevel() {
@@ -1299,11 +1306,12 @@
     if (btn && btn.classList) btn.classList.add("sel");
     ids.push(e.id);
     glyphs.push(e.symbol);
+    renderCrumb();
     renderGuideSequence();
     setTimeout(() => {
       busy = false;
       step();
-    }, 170);
+    }, LEVEL_TRANSITION_DELAY_MS);
   }
 
   function back() {
