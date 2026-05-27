@@ -198,17 +198,20 @@
     const sourceItems = items.slice();
     const count = sourceItems.length;
     const twoPi = Math.PI * 2;
-    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-    const sizePattern = [84, 64, 76, 92, 68, 80, 62, 88, 70, 78, 66, 90];
+    const anchors = buildSlotAnchors(count);
+    const sizePattern = [68, 66, 70, 64, 68, 78, 72, 80, 74, 76, 70, 82];
     const slots = sourceItems.map((item, index) => ({
       item,
       key: index + 1,
-      angle: index * goldenAngle + level * 0.34,
-      spread: Math.sqrt((index + 0.6) / Math.max(1, count)),
+      angle: anchors[index].angle + level * 0.34,
+      spread: anchors[index].spread,
       size: sizePattern[index % sizePattern.length],
       x: 0,
       y: 0,
       r: 0,
+      drawSize: 0,
+      alpha: 1,
+      depth: 0,
       visible: false,
     }));
     const hitSlots = [];
@@ -229,6 +232,27 @@
     let spinBoostUntil = 0;
     const friction = 0.94;
     const sensitivity = 0.006;
+
+    function buildSlotAnchors(total) {
+      if (total <= 0) return [];
+      const innerCount = total > 7 ? Math.min(5, Math.max(3, Math.floor(total * 0.42))) : 0;
+      const plans = innerCount
+        ? [
+            { count: innerCount, spread: 0.55, phase: -0.34 },
+            { count: total - innerCount, spread: 0.88, phase: 0.18 },
+          ]
+        : [{ count: total, spread: total <= 4 ? 0.6 : 0.78, phase: -0.12 }];
+      const out = [];
+      for (const plan of plans) {
+        for (let i = 0; i < plan.count; i++) {
+          out.push({
+            spread: plan.spread,
+            angle: plan.phase + (i / Math.max(1, plan.count)) * twoPi,
+          });
+        }
+      }
+      return out;
+    }
 
     function resize() {
       const rect = canvas.getBoundingClientRect();
@@ -329,23 +353,70 @@
       ctx.fill();
     }
 
-    function drawEmojiSlot(slot, cx, cy, radius, order) {
-      const orbit = radius * 0.66;
-      const angle = slot.angle + ry * 0.55;
-      const depth = (Math.sin(angle) + 1) / 2;
-      const sizeBase = slot.size * (radius / 150);
-      const missed = missKey === slot.key;
-      const size = sizeBase * (1.02 + depth * 0.2) * (missed ? 1.08 : 1);
-      const x = cx + Math.cos(angle) * slot.spread * orbit;
-      const y = cy + Math.sin(angle) * slot.spread * orbit;
-      const alpha = Math.max(0.66, 0.82 + depth * 0.18);
-      const radiusHit = size * 0.62;
+    function layoutEmojiSlots(cx, cy, radius) {
+      const orbit = radius * 0.82;
+      hitSlots.length = 0;
+      slots.forEach((slot) => {
+        const angle = slot.angle + ry * 0.55;
+        const depth = (Math.sin(angle) + 1) / 2;
+        const sizeBase = slot.size * (radius / 150);
+        const missed = missKey === slot.key;
+        const size = sizeBase * (1.02 + depth * 0.2) * (missed ? 1.08 : 1);
+        const x = cx + Math.cos(angle) * slot.spread * orbit;
+        const y = cy + Math.sin(angle) * slot.spread * orbit;
+        const alpha = Math.max(0.66, 0.82 + depth * 0.18);
 
-      slot.x = x;
-      slot.y = y;
-      slot.r = radiusHit;
-      slot.visible = true;
-      hitSlots.push(slot);
+        slot.x = x;
+        slot.y = y;
+        slot.r = size * 0.58;
+        slot.drawSize = size;
+        slot.alpha = alpha;
+        slot.depth = depth;
+        slot.visible = true;
+      });
+
+      for (let pass = 0; pass < 5; pass++) {
+        for (let i = 0; i < slots.length; i++) {
+          const a = slots[i];
+          for (let j = i + 1; j < slots.length; j++) {
+            const b = slots[j];
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const distance = Math.hypot(dx, dy) || 1;
+            const minDistance = a.drawSize * 0.44 + b.drawSize * 0.44 + radius * 0.025;
+            if (distance >= minDistance) continue;
+            const push = (minDistance - distance) * 0.5;
+            const ux = dx / distance;
+            const uy = dy / distance;
+            a.x -= ux * push;
+            a.y -= uy * push;
+            b.x += ux * push;
+            b.y += uy * push;
+          }
+        }
+
+        slots.forEach((slot) => {
+          const dx = slot.x - cx;
+          const dy = slot.y - cy;
+          const distance = Math.hypot(dx, dy);
+          const edge = Math.max(radius * 0.42, radius * 0.96 - slot.drawSize * 0.55);
+          if (distance <= edge) return;
+          const scale = edge / Math.max(1, distance);
+          slot.x = cx + dx * scale;
+          slot.y = cy + dy * scale;
+        });
+      }
+
+      slots.forEach((slot) => hitSlots.push(slot));
+    }
+
+    function drawEmojiSlot(slot) {
+      const missed = missKey === slot.key;
+      const size = slot.drawSize;
+      const x = slot.x;
+      const y = slot.y;
+      const alpha = slot.alpha;
+      const radiusHit = slot.r;
 
       if (missed) {
         const haloSize = size * 1.08;
@@ -406,11 +477,8 @@
       const radius = Math.min(width, height) * 0.47;
 
       drawEarth(cx, cy, radius);
-      hitSlots.length = 0;
-      slots.forEach((slot) => {
-        slot.visible = false;
-      });
-      slots.forEach((slot, order) => drawEmojiSlot(slot, cx, cy, radius, order));
+      layoutEmojiSlots(cx, cy, radius);
+      slots.slice().sort((a, b) => a.depth - b.depth).forEach((slot) => drawEmojiSlot(slot));
       ctx.globalAlpha = 1;
 
       if (running && (spinBoosting || Math.abs(velRY) > 0.0003 || pointer)) requestFrame();
