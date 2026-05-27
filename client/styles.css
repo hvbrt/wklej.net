@@ -396,7 +396,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   place-items: center;
   margin: 4px 0 8px;
   min-height: clamp(250px, 66vw, 326px);
-  transition: opacity .16s, transform .16s, filter .16s;
+  transition: transform .16s;
   contain: layout paint;
   isolation: isolate;
 }
@@ -418,8 +418,8 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 .emoji-globe-shell::before {
   inset: -14px;
   background:
-    radial-gradient(circle, transparent 44%, rgba(50,100,240,.10) 64%, rgba(30,70,200,.05) 78%, transparent 88%);
-  opacity: .78;
+    radial-gradient(circle, transparent 42%, rgba(42,132,255,.18) 64%, rgba(52,211,255,.08) 78%, transparent 88%);
+  opacity: .88;
   animation: emoji-orbit-pulse 4.8s ease-in-out infinite alternate;
 }
 .emoji-globe-shell::after {
@@ -427,9 +427,9 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   z-index: 4;
   border: 1px solid rgba(255,255,255,.18);
   box-shadow:
-    inset 0 0 34px rgba(255,255,255,.07),
+    inset 0 0 34px rgba(255,255,255,.09),
     0 28px 48px -34px rgba(5,7,13,.38),
-    0 0 44px rgba(109,94,252,.13);
+    0 0 54px rgba(59,130,246,.20);
   opacity: .78;
 }
 .emoji-globe {
@@ -446,10 +446,10 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   -webkit-user-select: none;
   transform: translateZ(0);
   background:
-    radial-gradient(circle at 36% 30%, #12204e 0%, #0a1330 70%, #070c22 100%);
+    radial-gradient(circle at 36% 30%, #1e4fff 0%, #1430a3 48%, #071447 78%, #030717 100%);
   box-shadow:
-    0 0 0 1px rgba(60,100,255,.15),
-    0 0 50px rgba(40,80,200,.22),
+    0 0 0 1px rgba(91,167,255,.24),
+    0 0 58px rgba(42,132,255,.34),
     0 22px 60px rgba(0,0,0,.60);
 }
 .emoji-globe:active { cursor: grabbing; }
@@ -469,25 +469,22 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
     inset 0 0 28px rgba(80,140,255,.08);
 }
 .grid.grid-loading {
-  opacity: .46;
-  filter: blur(.6px);
-  transform: translateY(4px) scale(.985);
   pointer-events: none;
 }
 .grid.grid-enter .emoji-globe-shell {
-  animation: emoji-globe-in .54s cubic-bezier(.16,1,.3,1) both;
+  animation: emoji-globe-in .46s cubic-bezier(.16,1,.3,1) both;
 }
 .grid.grid-enter .emoji-globe-shell::before {
-  animation: emoji-glow-in .72s cubic-bezier(.16,1,.3,1) both;
+  animation: emoji-glow-in .56s cubic-bezier(.16,1,.3,1) both;
 }
 @keyframes emoji-globe-in {
-  0% { opacity: 0; transform: translate3d(0, 12px, 0) scale(.9) rotate(-4deg); }
-  72% { opacity: 1; transform: translate3d(0, -1px, 0) scale(1.018) rotate(1deg); }
-  100% { opacity: 1; transform: none; }
+  0% { transform: rotate(18deg) scale(.985); }
+  68% { transform: rotate(-2deg) scale(1.012); }
+  100% { transform: none; }
 }
 @keyframes emoji-glow-in {
-  0% { opacity: 0; transform: scale(.82); }
-  100% { opacity: .75; transform: scale(1); }
+  0% { opacity: .62; transform: scale(.94); }
+  100% { opacity: .88; transform: scale(1); }
 }
 @keyframes emoji-orbit-pulse {
   0% { opacity: .48; transform: scale(.98); }

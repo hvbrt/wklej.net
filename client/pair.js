@@ -95,6 +95,7 @@
 
   function prepareGrid(moveMode, level) {
     clearTimeout(transitionTimer);
+    if (activeGlobe && typeof activeGlobe.spinTransition === "function") activeGlobe.spinTransition();
     grid.className = "grid grid-loading";
   }
 
@@ -119,7 +120,7 @@
   const MOJI_GLOBE_FRAME_SIZE = 240;
   const MOJI_GLOBE_FRAME_COLS = 8;
   const MOJI_GLOBE_FRAME_COUNT = 48;
-  const MOJI_GLOBE_SPRITE_SIZE = 88;
+  const MOJI_GLOBE_SPRITE_SIZE = 112;
   const mojiSpriteCache = new Map();
   let mojiEarthImage = null;
   let mojiEarthReady = false;
@@ -176,9 +177,9 @@
     const sx = sprite.getContext("2d");
     sx.textAlign = "center";
     sx.textBaseline = "middle";
-    sx.shadowColor = "rgba(120,170,255,.55)";
-    sx.shadowBlur = MOJI_GLOBE_SPRITE_SIZE * 0.13;
-    sx.font = `${Math.round(MOJI_GLOBE_SPRITE_SIZE * 0.62)}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+    sx.shadowColor = "rgba(3,8,24,.64)";
+    sx.shadowBlur = MOJI_GLOBE_SPRITE_SIZE * 0.11;
+    sx.font = `${Math.round(MOJI_GLOBE_SPRITE_SIZE * 0.72)}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
     sx.fillText(key, MOJI_GLOBE_SPRITE_SIZE / 2, MOJI_GLOBE_SPRITE_SIZE / 2);
     mojiSpriteCache.set(key, sprite);
     return sprite;
@@ -198,7 +199,7 @@
     const count = sourceItems.length;
     const twoPi = Math.PI * 2;
     const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-    const sizePattern = [70, 52, 62, 78, 56, 66, 50, 74, 58, 64, 54, 76];
+    const sizePattern = [84, 64, 76, 92, 68, 80, 62, 88, 70, 78, 66, 90];
     const slots = sourceItems.map((item, index) => ({
       item,
       key: index + 1,
@@ -225,6 +226,7 @@
     let pointer = null;
     let ghost = null;
     let ringOn = false;
+    let spinBoostUntil = 0;
     const friction = 0.94;
     const sensitivity = 0.006;
 
@@ -240,9 +242,9 @@
 
     function drawFallbackEarth(cx, cy, radius) {
       const body = ctx.createRadialGradient(cx - radius * 0.28, cy - radius * 0.34, radius * 0.08, cx, cy, radius * 1.04);
-      body.addColorStop(0, "rgba(88,126,255,.72)");
-      body.addColorStop(0.42, "rgba(25,39,128,.72)");
-      body.addColorStop(1, "rgba(7,12,34,.74)");
+      body.addColorStop(0, "rgba(88,150,255,.92)");
+      body.addColorStop(0.42, "rgba(18,55,184,.90)");
+      body.addColorStop(1, "rgba(3,8,34,.96)");
       ctx.fillStyle = body;
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, twoPi);
@@ -306,8 +308,10 @@
         }
         earthCtx.globalAlpha = 1;
         const size = radius * 2.04;
-        ctx.globalAlpha = 0.54;
+        ctx.globalAlpha = 0.76;
+        ctx.filter = "saturate(1.35) contrast(1.16)";
         ctx.drawImage(earthBlend, cx - size / 2, cy - size / 2, size, size);
+        ctx.filter = "none";
         ctx.globalAlpha = 1;
       } else {
         drawFallbackEarth(cx, cy, radius);
@@ -316,8 +320,8 @@
       ctx.restore();
 
       const glow = ctx.createRadialGradient(cx - radius * 0.2, cy - radius * 0.32, radius * 0.08, cx, cy, radius * 1.14);
-      glow.addColorStop(0, "rgba(255,255,255,.16)");
-      glow.addColorStop(0.55, "rgba(97,130,255,.05)");
+      glow.addColorStop(0, "rgba(255,255,255,.22)");
+      glow.addColorStop(0.55, "rgba(92,150,255,.08)");
       glow.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = glow;
       ctx.beginPath();
@@ -330,13 +334,11 @@
       const angle = slot.angle + ry * 0.55;
       const depth = (Math.sin(angle) + 1) / 2;
       const sizeBase = slot.size * (radius / 150);
-      const selected = selectedKey === slot.key;
       const missed = missKey === slot.key;
-      const hovered = hoverKey === slot.key;
-      const size = sizeBase * (0.9 + depth * 0.18) * (selected || missed || hovered ? 1.14 : 1);
+      const size = sizeBase * (1.02 + depth * 0.2) * (missed ? 1.08 : 1);
       const x = cx + Math.cos(angle) * slot.spread * orbit;
       const y = cy + Math.sin(angle) * slot.spread * orbit;
-      const alpha = Math.max(0.48, 0.72 + depth * 0.28);
+      const alpha = Math.max(0.66, 0.82 + depth * 0.18);
       const radiusHit = size * 0.62;
 
       slot.x = x;
@@ -345,22 +347,22 @@
       slot.visible = true;
       hitSlots.push(slot);
 
-      const haloSize = size * 1.05;
-      const halo = ctx.createRadialGradient(x, y, 0, x, y, haloSize);
-      halo.addColorStop(0, missed ? "rgba(255,120,120,.42)" : "rgba(195,220,255,.46)");
-      halo.addColorStop(0.42, missed ? "rgba(239,68,68,.18)" : "rgba(150,185,255,.20)");
-      halo.addColorStop(1, "rgba(130,170,255,0)");
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = halo;
-      ctx.beginPath();
-      ctx.arc(x, y, haloSize, 0, twoPi);
-      ctx.fill();
+      if (missed) {
+        const haloSize = size * 1.08;
+        const halo = ctx.createRadialGradient(x, y, 0, x, y, haloSize);
+        halo.addColorStop(0, "rgba(255,120,120,.36)");
+        halo.addColorStop(0.48, "rgba(239,68,68,.18)");
+        halo.addColorStop(1, "rgba(239,68,68,0)");
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(x, y, haloSize, 0, twoPi);
+        ctx.fill();
 
-      if (selected || missed || hovered) {
         ctx.save();
-        ctx.globalAlpha = missed ? 0.72 : selected ? 0.52 : 0.28;
-        ctx.strokeStyle = missed ? "rgba(239,68,68,.86)" : "rgba(210,228,255,.72)";
-        ctx.lineWidth = selected ? 2 : 1;
+        ctx.globalAlpha = 0.72;
+        ctx.strokeStyle = "rgba(239,68,68,.86)";
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(x, y, radiusHit * 1.18, 0, twoPi);
         ctx.stroke();
@@ -375,8 +377,12 @@
     function frame() {
       if (!running) return;
       raf = requestAnimationFrame(frame);
+      const spinBoosting = !reduceMotion && !pointer && performance.now() < spinBoostUntil;
       if (!reduceMotion && !pointer) {
-        if (Math.abs(velRY) > 0.0003) {
+        if (spinBoosting) {
+          ry += 0.155 + level * 0.012;
+          velRY *= 0.86;
+        } else if (Math.abs(velRY) > 0.0003) {
           ry += velRY;
           velRY *= friction;
         } else {
@@ -385,7 +391,7 @@
         }
       }
 
-      const wantRing = Math.abs(velRY) > 0.018;
+      const wantRing = Math.abs(velRY) > 0.018 || spinBoosting;
       if (speedRing && wantRing !== ringOn) {
         speedRing.classList.toggle("on", wantRing);
         ringOn = wantRing;
@@ -563,6 +569,13 @@
         setTimeout(() => {
           if (missKey === key) missKey = 0;
         }, 420);
+      },
+      spinTransition() {
+        if (reduceMotion) return;
+        spinBoostUntil = Math.max(spinBoostUntil, performance.now() + 520);
+        velRY = Math.max(Math.abs(velRY), 0.055);
+        if (speedRing) speedRing.classList.add("on");
+        ringOn = true;
       },
       destroy() {
         running = false;
@@ -1114,6 +1127,7 @@
     ids = [];
     busy = false;
     if (activeGlobe && btn && Number.isInteger(btn.globeKey)) activeGlobe.setSelected(btn.globeKey);
+    if (activeGlobe && typeof activeGlobe.spinTransition === "function") activeGlobe.spinTransition();
     renderGuideSequence();
     step();
   }
@@ -1193,6 +1207,7 @@
     }
     busy = true;
     if (activeGlobe && btn && Number.isInteger(btn.globeKey)) activeGlobe.setSelected(btn.globeKey);
+    if (activeGlobe && typeof activeGlobe.spinTransition === "function") activeGlobe.spinTransition();
     if (btn && btn.classList) btn.classList.add("sel");
     ids.push(e.id);
     glyphs.push(e.symbol);
