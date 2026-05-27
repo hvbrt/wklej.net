@@ -402,7 +402,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 }
 .emoji-globe-shell {
   position: relative;
-  width: min(78vw, 318px);
+  width: min(82vw, 340px);
   aspect-ratio: 1;
   border-radius: 50%;
   isolation: isolate;
@@ -424,7 +424,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 }
 .emoji-globe-shell::after {
   inset: 0;
-  z-index: 3;
+  z-index: 4;
   border: 1px solid rgba(255,255,255,.18);
   box-shadow:
     inset 0 0 34px rgba(255,255,255,.07),
@@ -442,18 +442,21 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   border-radius: 50%;
   cursor: grab;
   touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  transform: translateZ(0);
   background:
-    radial-gradient(circle at 37% 30%, #2a4aaa 0%, #162080 42%, #080d30 100%);
+    radial-gradient(circle at 36% 30%, #12204e 0%, #0a1330 70%, #070c22 100%);
   box-shadow:
     0 0 0 1px rgba(60,100,255,.15),
     0 0 50px rgba(40,80,200,.22),
-    0 24px 64px rgba(0,0,0,.55);
+    0 22px 60px rgba(0,0,0,.60);
 }
 .emoji-globe:active { cursor: grabbing; }
 .emoji-globe-speed-ring {
   position: absolute;
   inset: 0;
-  z-index: 4;
+  z-index: 5;
   border: 2px solid rgba(80,140,255,0);
   border-radius: 50%;
   pointer-events: none;
@@ -1239,5 +1242,5 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   .pairing-card { margin-bottom: 22px; padding: 12px 14px 16px; }
   .pair-crumb { font-size: 22px; letter-spacing: 4px; }
   .grid { min-height: 244px; }
-  .emoji-globe-shell { width: min(76vw, 292px); }
+  .emoji-globe-shell { width: min(80vw, 318px); }
 }
