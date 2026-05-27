@@ -957,6 +957,23 @@
     if (e.dataTransfer && e.dataTransfer.files.length) enqueue(e.dataTransfer.files);
   });
 
+  // ---------- instructions ----------
+  function showInfoModal() {
+    const modal = $("info-modal");
+    if (!modal) return;
+    modal.hidden = false;
+    modal.classList.add("show");
+    const close = $("info-close");
+    if (close) requestAnimationFrame(() => close.focus({ preventScroll: true }));
+  }
+
+  function hideInfoModal() {
+    const modal = $("info-modal");
+    if (!modal) return;
+    modal.classList.remove("show");
+    modal.hidden = true;
+  }
+
   // ---------- teardown ----------
   function canDelayReset() {
     return state.mode === "connected" && state.connected && !state.ending;
@@ -1069,6 +1086,7 @@
   }
 
   function purgeSensitiveDom() {
+    hideInfoModal();
     clearGracePrompt();
     editor.value = "";
     dropzone.classList.remove("has-text");
@@ -1193,6 +1211,20 @@
   $("page-refresh").addEventListener("click", () => {
     if (state.token && state.role && state.mode !== "ended") hardReset("refreshed", true, { immediate: true });
     else location.replace("/");
+  });
+
+  const infoBtn = $("page-info");
+  const infoModal = $("info-modal");
+  const infoClose = $("info-close");
+  if (infoBtn) infoBtn.addEventListener("click", showInfoModal);
+  if (infoClose) infoClose.addEventListener("click", hideInfoModal);
+  if (infoModal) {
+    infoModal.addEventListener("click", (ev) => {
+      if (ev.target === infoModal) hideInfoModal();
+    });
+  }
+  window.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") hideInfoModal();
   });
 
   $("grace-extend").addEventListener("click", extendGraceShutdown);

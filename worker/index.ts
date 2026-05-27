@@ -252,10 +252,13 @@ function withSecurityHeadersInit(req: Request, init: ResponseInit): ResponseInit
   const headers = new Headers(init.headers);
 
   headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("X-DNS-Prefetch-Control", "off");
   headers.set("Referrer-Policy", "no-referrer");
   headers.set("X-Frame-Options", "DENY");
+  headers.set("X-Permitted-Cross-Domain-Policies", "none");
   headers.set("Cross-Origin-Opener-Policy", "same-origin");
   headers.set("Cross-Origin-Resource-Policy", "same-origin");
+  headers.set("Origin-Agent-Cluster", "?1");
   headers.set(
     "Permissions-Policy",
     "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), accelerometer=(), gyroscope=()",

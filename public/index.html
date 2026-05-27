@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#edf7ff" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#070b16" media="(prefers-color-scheme: dark)" />
 <title>wklej.net — ephemeral P2P</title>
-<link rel="stylesheet" href="/97f546b0d5.css" />
+<link rel="stylesheet" href="/ff71361cc7.css" />
 </head>
 <body>
 <div class="aurora" aria-hidden="true"></div>
@@ -122,6 +122,19 @@ aria-label="write text or drop file here - przeciagnij plik lub napisz wiadomoś
 </section>
 </main>
 <button id="page-refresh" class="page-refresh" type="button" aria-label="refresh" title="refresh" aria-live="off">↻</button>
+<button id="page-info" class="page-info" type="button" aria-label="instructions" title="instructions" aria-haspopup="dialog">i</button>
+<div id="info-modal" class="info-modal" hidden>
+<div class="info-card" role="dialog" aria-modal="true" aria-labelledby="info-title">
+<button id="info-close" class="info-close" type="button" aria-label="close">×</button>
+<div id="info-title" class="info-title">how it works</div>
+<ul class="info-list">
+<li>tap three emoji in the same order on both devices</li>
+<li>swipe across the globe to create or join a named room</li>
+<li>nearby devices can start a quick send flow</li>
+<li>text and files travel P2P; the Worker only signals</li>
+</ul>
+</div>
+</div>
 <template id="att-card">
 <div class="att">
 <div class="att-icon">📄</div>
@@ -133,6 +146,6 @@ aria-label="write text or drop file here - przeciagnij plik lub napisz wiadomoś
 <button class="att-action btn icon" type="button"></button>
 </div>
 </template>
-<script src="/6b2a3a1498.js"></script>
+<script src="/5d949b4576.js"></script>
 </body>
 </html>
