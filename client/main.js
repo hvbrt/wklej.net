@@ -138,6 +138,14 @@
   }
 
   async function createSession(selection) {
+    if (selection && selection.named) {
+      const r = await fetch("/api/name-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: selection.name, intent: selection.intent }),
+      });
+      return r.json();
+    }
     const r = await fetch("/api/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -203,7 +211,11 @@
 
     let d;
     try {
-      d = await createSession(state.selection);
+      const nextSelection =
+        state.selection && state.selection.named && state.selection.intent === "create"
+          ? { ...state.selection, intent: "join" }
+          : state.selection;
+      d = await createSession(nextSelection);
     } catch {
       state.retrying = false;
       hardReset("network error", false);
@@ -213,6 +225,9 @@
     if (!d || !d.ok || !d.token) {
       hardReset(errorText(d && d.reason), false);
       return;
+    }
+    if (state.selection && state.selection.named && state.selection.intent === "create") {
+      state.selection = { ...state.selection, intent: "join" };
     }
     state.token = d.token;
     state.endKey = "";
@@ -1133,6 +1148,9 @@
       "bad-path": "expired",
       "expired-path": "expired",
       "rate-limited": "slow down",
+      "bad-name": "bad name",
+      "name-active": "name active",
+      "no-room": "no room",
       "server-misconfig": "config error",
       "room-active": "room active",
       "no-active-room": "no room",

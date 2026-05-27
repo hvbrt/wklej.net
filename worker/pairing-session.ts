@@ -7,7 +7,7 @@ import {
   TREE_DEPTH,
   POS_COUNT,
 } from "./emoji-tree";
-import { currentBucket, isUsableBucket, roomKeyForSelection } from "./pairing";
+import { currentBucket, isUsableBucket, roomKeyForName, roomKeyForSelection } from "./pairing";
 import { sealRoomKey, openRoomKeyToken } from "./room-key";
 import type { FirstMove } from "./room-state";
 
@@ -108,6 +108,62 @@ export async function handlePairSession(req: Request, deps: PairingDeps): Promis
   return Response.json({ ok: true, available, token });
 }
 
+export async function handleNamedSession(req: Request, deps: PairingDeps): Promise<Response> {
+  if (!deps.pepper) return Response.json({ ok: false, reason: "server-misconfig" }, { status: 500 });
+
+  let name = "";
+  let intent = "";
+  try {
+    const body = (await req.json()) as { name?: unknown; intent?: unknown };
+    name = typeof body.name === "string" ? normalizeRoomName(body.name) : "";
+    intent = body.intent === "create" || body.intent === "join" ? body.intent : "";
+  } catch {
+    return Response.json({ ok: false, reason: "bad-request" }, { status: 400 });
+  }
+
+  if (!name || !intent) return Response.json({ ok: false, reason: "bad-name" }, { status: 400 });
+
+  const current = currentBucket();
+  const active = await activeNamedRoom(name, deps, current);
+
+  if (intent === "join") {
+    if (!active) return Response.json({ ok: false, reason: "no-room" }, { status: 404 });
+    const token = await sealRoomKey(active.roomKey, deps.pepper);
+    return Response.json({ ok: true, available: false, token });
+  }
+
+  if (active) return Response.json({ ok: false, reason: "name-active" }, { status: 409 });
+
+  const roomKey = await roomKeyForName(current, name, deps.pepper);
+  const token = await sealRoomKey(roomKey, deps.pepper);
+  return Response.json({ ok: true, available: true, token });
+}
+
 export function openRoomKey(token: string, pepper: string | undefined): Promise<string | null> {
   return openRoomKeyToken(token, pepper);
+}
+
+async function activeNamedRoom(
+  name: string,
+  deps: PairingDeps,
+  bucket: number,
+): Promise<{ bucket: number; roomKey: string } | null> {
+  for (const candidate of [bucket, bucket - 1]) {
+    if (!isUsableBucket(candidate)) continue;
+    const roomKey = await roomKeyForName(candidate, name, deps.pepper);
+    if (await deps.isRoomActive(roomKey)) return { bucket: candidate, roomKey };
+  }
+  return null;
+}
+
+function normalizeRoomName(raw: string): string {
+  const value = raw
+    .toLowerCase()
+    .normalize("NFKC")
+    .replace(/[^a-z0-9._ -]+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (value.length < 4 || value.length > 40) return "";
+  if (new Set(value.replace(/[^a-z0-9]/g, "")).size < 2) return "";
+  return value;
 }

@@ -1,4 +1,4 @@
-// Pairing picker: spatial first move (emoji id + drop cell), then two clicks.
+// Pairing picker: first tap carries emoji id + visual position, then two taps.
 // It sends only ids and position to the Worker; it derives no hashes or keys.
 
 (function () {
@@ -10,13 +10,21 @@
   const nearbyText = document.getElementById("nearby-text");
   const nearbyList = document.getElementById("nearby-list");
   const nearbyInvite = document.getElementById("nearby-invite");
+  const nameModal = document.getElementById("room-name-modal");
+  const nameInput = document.getElementById("room-name-input");
+  const nameStatus = document.getElementById("room-name-status");
+  const nameCreate = document.getElementById("room-name-create");
+  const nameJoin = document.getElementById("room-name-join");
+  const nameClose = document.getElementById("room-name-close");
   const TAP_MOVE_PX = 10;
+  const ROOM_SWIPE_MIN_RATIO = 0.58;
+  const ROOM_SWIPE_CENTER_RATIO = 0.34;
   const NEARBY_INTERVAL_MS = 5000;
   const MANUAL_HINT_AFTER_MS = 11000;
   const DEVICE_FRESH_MS = 15000;
   const LEVEL_TRANSITION_DELAY_MS = 330;
-  const GLOBE_TRANSITION_SPIN_MS = 780;
-  const GLOBE_TRANSITION_FRAME_MS = 42;
+  const GLOBE_TRANSITION_SPIN_MS = 740;
+  const GLOBE_TRANSITION_FRAME_MS = 16;
 
   let first = null;
   let ids = [];
@@ -155,6 +163,7 @@
         commitFirst(hit.item.id, pos, hit.item.symbol, { globeKey: hit.key, globeId: hit.item.id });
       },
       onPick: (hit) => pick({ id: hit.item.id, symbol: hit.item.symbol }, { globeKey: hit.key, globeId: hit.item.id }),
+      onRoomSwipe: showNameRoomModal,
     });
     if (!moveMode && level > 0 && typeof activeGlobe.spinTransition === "function") activeGlobe.spinTransition();
   }
@@ -236,7 +245,6 @@
     let missKey = 0;
     let hoverKey = 0;
     let pointer = null;
-    let ghost = null;
     let ringOn = false;
     let spinBoostUntil = 0;
     const friction = 0.94;
@@ -341,8 +349,8 @@
         }
         earthCtx.globalAlpha = 1;
         const size = radius * 2.04;
-        ctx.globalAlpha = 0.72;
-        ctx.filter = "saturate(1.25) contrast(1.12) brightness(.94)";
+        ctx.globalAlpha = 0.84;
+        ctx.filter = "saturate(1.48) contrast(1.08) brightness(1.16)";
         ctx.drawImage(earthBlend, cx - size / 2, cy - size / 2, size, size);
         ctx.filter = "none";
         ctx.globalAlpha = 1;
@@ -362,17 +370,20 @@
       ctx.fill();
     }
 
-    function layoutEmojiSlots(cx, cy, radius) {
+    function layoutEmojiSlots(cx, cy, radius, now) {
       const orbit = radius * 0.86;
       hitSlots.length = 0;
       slots.forEach((slot) => {
-        const angle = slot.angle + ry * 0.55;
+        const entry = entryProgress(slot, now);
+        const swirl = animateEmojiEntry ? (1 - entry) * (0.44 + (slot.key % 4) * 0.05) : 0;
+        const angle = slot.angle + ry * 0.55 + swirl;
         const depth = (Math.sin(angle) + 1) / 2;
         const sizeBase = slot.size * (radius / 150);
         const missed = missKey === slot.key;
         const size = sizeBase * (1.02 + depth * 0.2) * (missed ? 1.08 : 1);
-        const x = cx + Math.cos(angle) * slot.spread * orbit;
-        const y = cy + Math.sin(angle) * slot.spread * orbit;
+        const spread = slot.spread * (animateEmojiEntry ? 0.9 + entry * 0.1 : 1);
+        const x = cx + Math.cos(angle) * spread * orbit;
+        const y = cy + Math.sin(angle) * spread * orbit;
         const alpha = Math.max(0.66, 0.82 + depth * 0.18);
 
         slot.x = x;
@@ -419,15 +430,20 @@
       slots.forEach((slot) => hitSlots.push(slot));
     }
 
+    function entryProgress(slot, now) {
+      if (!animateEmojiEntry) return 1;
+      const raw = (now - entryStart - slot.stagger) / 420;
+      const clamped = Math.max(0, Math.min(1, raw));
+      return 1 - Math.pow(1 - clamped, 3);
+    }
+
     function drawEmojiSlot(slot, now) {
       const missed = missKey === slot.key;
-      const entryRaw = animateEmojiEntry ? (now - entryStart - slot.stagger) / 360 : 1;
-      const entry = Math.max(0, Math.min(1, entryRaw));
-      const eased = 1 - Math.pow(1 - entry, 3);
+      const eased = entryProgress(slot, now);
       const size = slot.drawSize * (0.82 + eased * 0.18);
       const x = slot.x;
       const y = slot.y + (1 - eased) * slot.drawSize * 0.06;
-      const alpha = slot.alpha * (0.4 + eased * 0.6);
+      const alpha = slot.alpha * (0.18 + eased * 0.82);
       const radiusHit = slot.r;
 
       if (missed) {
@@ -499,7 +515,7 @@
       const radius = Math.min(width, height) * 0.47;
 
       drawEarth(cx, cy, radius);
-      layoutEmojiSlots(cx, cy, radius);
+      layoutEmojiSlots(cx, cy, radius, now);
       slots.slice().sort((a, b) => a.depth - b.depth).forEach((slot) => drawEmojiSlot(slot, now));
       ctx.globalAlpha = 1;
 
@@ -547,25 +563,9 @@
       return best;
     }
 
-    function makeGhost(hit, ev) {
-      ghost = document.createElement("div");
-      ghost.className = "drag-ghost";
-      ghost.textContent = hit.item.symbol;
-      document.body.appendChild(ghost);
-      moveGhost(ev);
-    }
-
-    function moveGhost(ev) {
-      if (!ghost) return;
-      ghost.style.left = ev.clientX + "px";
-      ghost.style.top = ev.clientY + "px";
-    }
-
     function clearPointer() {
       hoverKey = 0;
       pointer = null;
-      if (ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost);
-      ghost = null;
     }
 
     function applyRotate(ev) {
@@ -578,6 +578,30 @@
       pointer.prevY = ev.clientY;
       ry += dx * sensitivity;
       requestFrame();
+    }
+
+    function boostSpin(ms = GLOBE_TRANSITION_SPIN_MS) {
+      if (reduceMotion) return;
+      spinBoostUntil = Math.max(spinBoostUntil, performance.now() + ms);
+      velRY = Math.max(Math.abs(velRY), 0.058);
+      if (speedRing) speedRing.classList.add("on");
+      ringOn = true;
+      requestFrame();
+    }
+
+    function isRoomSwipe(current, ev) {
+      if (!current) return false;
+      const dx = ev.clientX - current.startX;
+      const dy = ev.clientY - current.startY;
+      const midY = height / 2;
+      const start = localPoint({ clientX: current.startX, clientY: current.startY });
+      const end = localPoint(ev);
+      return (
+        Math.abs(dx) >= width * ROOM_SWIPE_MIN_RATIO &&
+        Math.abs(dy) <= height * 0.22 &&
+        Math.abs(start.y - midY) <= height * ROOM_SWIPE_CENTER_RATIO &&
+        Math.abs(end.y - midY) <= height * ROOM_SWIPE_CENTER_RATIO
+      );
     }
 
     function onPointerDown(ev) {
@@ -594,6 +618,7 @@
         prevY: ev.clientY,
         prevTime: performance.now(),
         dragVX: 0,
+        swipedRoom: false,
       };
       velRY = 0;
       if (hit) hoverKey = hit.key;
@@ -607,43 +632,22 @@
       if (!pointer) return;
       const moved = Math.hypot(ev.clientX - pointer.startX, ev.clientY - pointer.startY);
       if ((pointer.mode === "press" || pointer.mode === "first-press") && moved > TAP_MOVE_PX) {
-        if (pointer.mode === "first-press" && pointer.hit) {
-          pointer.mode = "first-drag";
-          makeGhost(pointer.hit, ev);
-        } else {
-          pointer.mode = "rotate";
-        }
+        pointer.mode = "rotate";
       }
 
       if (pointer.mode === "rotate") {
         applyRotate(ev);
+        pointer.swipedRoom = pointer.swipedRoom || isRoomSwipe(pointer, ev);
         hoverKey = 0;
-      } else if (pointer.mode === "first-drag") {
-        moveGhost(ev);
-        const pt = localPoint(ev);
-        const target = hitTest(pt.x, pt.y);
-        hoverKey = target ? target.key : pointer.hit.key;
       }
       ev.preventDefault();
     }
 
     function onPointerUp(ev) {
       if (!pointer) return;
-      const pt = localPoint(ev);
-      const target = hitTest(pt.x, pt.y);
       const moved = Math.hypot(ev.clientX - pointer.startX, ev.clientY - pointer.startY);
       const current = pointer;
       clearPointer();
-
-      if (current.mode === "first-drag" && current.hit) {
-        if (target && target.key !== current.hit.key) {
-          opts.onFirst(current.hit, target);
-          return;
-        }
-        velRY = current.dragVX * sensitivity;
-        requestFrame();
-        return;
-      }
 
       if (current.mode === "first-press" && current.hit && moved <= TAP_MOVE_PX) {
         opts.onFirst(current.hit, null);
@@ -657,6 +661,11 @@
 
       if (current.mode === "rotate") {
         velRY = current.dragVX * sensitivity;
+        if (current.swipedRoom || isRoomSwipe(current, ev)) {
+          boostSpin(640);
+          if (typeof opts.onRoomSwipe === "function") setTimeout(opts.onRoomSwipe, reduceMotion ? 0 : 140);
+          return;
+        }
         requestFrame();
       }
     }
@@ -694,12 +703,7 @@
         }, 420);
       },
       spinTransition() {
-        if (reduceMotion) return;
-        spinBoostUntil = Math.max(spinBoostUntil, performance.now() + GLOBE_TRANSITION_SPIN_MS);
-        velRY = Math.max(Math.abs(velRY), 0.055);
-        if (speedRing) speedRing.classList.add("on");
-        ringOn = true;
-        requestFrame();
+        boostSpin();
       },
       destroy() {
         running = false;
@@ -949,6 +953,50 @@
 
   function deviceKind(label) {
     return /iphone|android|phone|ipad|mobile/i.test(label) ? "phone" : "computer";
+  }
+
+  function normalizeRoomName(raw) {
+    return String(raw || "")
+      .toLowerCase()
+      .normalize("NFKC")
+      .replace(/[^a-z0-9._ -]+/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function showNameRoomModal() {
+    if (!nameModal || busy || !done || activeGuide) return;
+    if (nameStatus) nameStatus.textContent = "use a non-obvious name";
+    nameModal.hidden = false;
+    nameModal.classList.add("show");
+    requestAnimationFrame(() => {
+      if (nameInput) {
+        nameInput.focus({ preventScroll: true });
+        nameInput.select();
+      }
+    });
+  }
+
+  function hideNameRoomModal() {
+    if (!nameModal) return;
+    nameModal.classList.remove("show");
+    nameModal.hidden = true;
+  }
+
+  function submitNameRoom(intent) {
+    if (busy || !done || !nameInput) return;
+    const name = normalizeRoomName(nameInput.value);
+    if (name.length < 4 || name.length > 40 || new Set(name.replace(/[^a-z0-9]/g, "")).size < 2) {
+      if (nameStatus) nameStatus.textContent = "4-40 chars, avoid obvious names";
+      nameInput.focus();
+      return;
+    }
+    busy = true;
+    hideNameRoomModal();
+    stopNearby(true);
+    const cb = done;
+    done = null;
+    if (cb) cb({ named: true, name, intent }, `${intent}: ${name}`, { named: true, intent });
   }
 
   function renderManualCard(reason) {
@@ -1226,10 +1274,6 @@
     revealGrid(true, 0);
   }
 
-  function cleanupDrag() {
-    grid.classList.remove("dragging");
-  }
-
   function flashWrong(btn, text) {
     if (nearbyText) nearbyText.textContent = text;
     clearTimeout(wrongTimer);
@@ -1361,7 +1405,6 @@
 
   function reset(notifyNearby) {
     seq++;
-    cleanupDrag();
     first = null;
     ids = [];
     glyphs = [];
@@ -1371,6 +1414,7 @@
     activeGuide = null;
     activeInviteId = "";
     nearbyDrafts.clear();
+    hideNameRoomModal();
     if (grid) {
       destroyGlobe();
       grid.className = "grid";
@@ -1403,6 +1447,29 @@
   }
 
   if (backBtn) backBtn.addEventListener("click", back);
+  if (nameCreate) nameCreate.addEventListener("click", () => submitNameRoom("create"));
+  if (nameJoin) nameJoin.addEventListener("click", () => submitNameRoom("join"));
+  if (nameClose) nameClose.addEventListener("click", hideNameRoomModal);
+  if (nameModal) {
+    nameModal.addEventListener("click", (ev) => {
+      if (ev.target === nameModal) hideNameRoomModal();
+    });
+  }
+  if (nameInput) {
+    nameInput.addEventListener("input", () => {
+      const value = normalizeRoomName(nameInput.value);
+      if (nameStatus) nameStatus.textContent = value && value !== nameInput.value ? "unsupported chars will be ignored" : "use a non-obvious name";
+    });
+    nameInput.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") {
+        ev.preventDefault();
+        submitNameRoom("join");
+      } else if (ev.key === "Escape") {
+        ev.preventDefault();
+        hideNameRoomModal();
+      }
+    });
+  }
   window.addEventListener("pagehide", () => stopNearby(true));
   window.__P = { begin, reset };
 })();

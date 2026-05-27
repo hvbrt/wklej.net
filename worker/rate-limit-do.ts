@@ -9,7 +9,8 @@ const MAX_PRESENCE_IDS = 16;
 const MAX_INVITES = 32;
 const LIMITS: Record<string, number> = {
   create: 10, // create room: 10/min
-  join: 30, // join room: 30/min
+  join: 24, // join room: 24/min
+  name: 8, // custom-name attempts: 8/min
 };
 
 interface Counter {

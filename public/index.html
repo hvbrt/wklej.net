@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#edf7ff" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#070b16" media="(prefers-color-scheme: dark)" />
 <title>wklej.net — ephemeral P2P</title>
-<link rel="stylesheet" href="/8d242eeceb.css" />
+<link rel="stylesheet" href="/97f546b0d5.css" />
 </head>
 <body>
 <div class="aurora" aria-hidden="true"></div>
@@ -24,6 +24,30 @@
 <button id="pair-back" class="btn ghost tiny" type="button" hidden>wstecz</button>
 </div>
 <div id="emoji-grid" class="grid"></div>
+<div id="room-name-modal" class="room-name-modal" hidden>
+<div class="room-name-card" role="dialog" aria-modal="true" aria-labelledby="room-name-title">
+<button id="room-name-close" class="room-name-close" type="button" aria-label="close">×</button>
+<div id="room-name-title" class="room-name-title">named room</div>
+<p class="room-name-sub">same name on both devices · no emoji</p>
+<input
+id="room-name-input"
+class="room-name-input"
+type="text"
+minlength="4"
+maxlength="40"
+autocomplete="off"
+autocapitalize="none"
+spellcheck="false"
+inputmode="text"
+aria-label="room name"
+/>
+<div class="room-name-actions">
+<button id="room-name-create" class="room-name-action primary" type="button">create</button>
+<button id="room-name-join" class="room-name-action" type="button">join</button>
+</div>
+<p id="room-name-status" class="room-name-status">use a non-obvious name</p>
+</div>
+</div>
 <div id="nearby-assist" class="nearby-assist" hidden>
 <div class="nearby-head">
 <span class="nearby-dot" aria-hidden="true"></span>
@@ -109,6 +133,6 @@ aria-label="write text or drop file here - przeciagnij plik lub napisz wiadomoś
 <button class="att-action btn icon" type="button"></button>
 </div>
 </template>
-<script src="/48d19262d6.js"></script>
+<script src="/6b2a3a1498.js"></script>
 </body>
 </html>

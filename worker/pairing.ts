@@ -19,3 +19,7 @@ export function isUsableBucket(bucket: number, now: number = Date.now()): boolea
 export function roomKeyForSelection(bucket: number, first: FirstMove, rest: number[], pepper: string): Promise<string> {
   return sha256Hex(`path:v4:${pepper}:${bucket}:${first.id}@${first.pos}:${rest.join(",")}`);
 }
+
+export function roomKeyForName(bucket: number, name: string, pepper: string): Promise<string> {
+  return sha256Hex(`name:v1:${pepper}:${bucket}:${name}`);
+}
