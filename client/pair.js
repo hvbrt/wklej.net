@@ -14,9 +14,9 @@
   const NEARBY_INTERVAL_MS = 5000;
   const MANUAL_HINT_AFTER_MS = 11000;
   const DEVICE_FRESH_MS = 15000;
-  const LEVEL_TRANSITION_DELAY_MS = 360;
-  const GLOBE_TRANSITION_SPIN_MS = 900;
-  const GLOBE_TRANSITION_FRAME_MS = 64;
+  const LEVEL_TRANSITION_DELAY_MS = 330;
+  const GLOBE_TRANSITION_SPIN_MS = 780;
+  const GLOBE_TRANSITION_FRAME_MS = 42;
 
   let first = null;
   let ids = [];
@@ -181,9 +181,9 @@
     const sx = sprite.getContext("2d");
     sx.textAlign = "center";
     sx.textBaseline = "middle";
-    sx.shadowColor = "rgba(2,6,23,.78)";
-    sx.shadowBlur = MOJI_GLOBE_SPRITE_SIZE * 0.13;
-    sx.shadowOffsetY = MOJI_GLOBE_SPRITE_SIZE * 0.018;
+    sx.shadowColor = "rgba(1,4,18,.9)";
+    sx.shadowBlur = MOJI_GLOBE_SPRITE_SIZE * 0.15;
+    sx.shadowOffsetY = MOJI_GLOBE_SPRITE_SIZE * 0.025;
     sx.font = `${Math.round(MOJI_GLOBE_SPRITE_SIZE * 0.72)}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
     sx.fillText(key, MOJI_GLOBE_SPRITE_SIZE / 2, MOJI_GLOBE_SPRITE_SIZE / 2);
     mojiSpriteCache.set(key, sprite);
@@ -341,8 +341,8 @@
         }
         earthCtx.globalAlpha = 1;
         const size = radius * 2.04;
-        ctx.globalAlpha = 0.76;
-        ctx.filter = "saturate(1.35) contrast(1.16)";
+        ctx.globalAlpha = 0.72;
+        ctx.filter = "saturate(1.25) contrast(1.12) brightness(.94)";
         ctx.drawImage(earthBlend, cx - size / 2, cy - size / 2, size, size);
         ctx.filter = "none";
         ctx.globalAlpha = 1;
@@ -453,8 +453,8 @@
       }
 
       const contrast = ctx.createRadialGradient(x, y + size * 0.1, size * 0.05, x, y + size * 0.12, size * 0.64);
-      contrast.addColorStop(0, "rgba(2,6,23,.30)");
-      contrast.addColorStop(0.58, "rgba(2,6,23,.16)");
+      contrast.addColorStop(0, "rgba(1,4,18,.42)");
+      contrast.addColorStop(0.58, "rgba(1,4,18,.24)");
       contrast.addColorStop(1, "rgba(2,6,23,0)");
       ctx.globalAlpha = alpha * 0.9;
       ctx.fillStyle = contrast;
@@ -475,7 +475,7 @@
       const hasMomentum = !reduceMotion && !pointer && Math.abs(velRY) > 0.0003;
       if (!reduceMotion && !pointer) {
         if (spinBoosting) {
-          ry += 0.073 + level * 0.006;
+          ry += 0.086 + level * 0.007;
           velRY *= 0.86;
         } else if (hasMomentum) {
           ry += velRY;

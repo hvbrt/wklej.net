@@ -472,10 +472,10 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   pointer-events: none;
 }
 .grid.grid-enter .emoji-globe-shell {
-  animation: emoji-globe-in .68s cubic-bezier(.16,1,.3,1) both;
+  animation: emoji-globe-in .62s cubic-bezier(.16,1,.3,1) both;
 }
 .grid.grid-enter .emoji-globe-shell::before {
-  animation: emoji-glow-in .76s cubic-bezier(.16,1,.3,1) both;
+  animation: emoji-glow-in .70s cubic-bezier(.16,1,.3,1) both;
 }
 @keyframes emoji-globe-in {
   0% { transform: rotate(18deg) scale(.985); }
