@@ -106,6 +106,20 @@
     panel.style.removeProperty("--session-c");
   }
 
+  function seedWaitText() {
+    if (state.selection && state.selection.named) return state.selection.name || state.label.replace(/^(create|join):\s*/i, "");
+    return state.label;
+  }
+
+  function applySeedWaitLabel() {
+    const el = $("seed-label");
+    if (!el) return;
+    const named = !!(state.selection && state.selection.named);
+    el.textContent = seedWaitText();
+    el.classList.toggle("wait-name", named);
+    el.classList.toggle("wait-emoji", !named);
+  }
+
   // ---------- Pairing session ----------
   function beginPairing() {
     state.mode = "pairing";
@@ -271,7 +285,7 @@
     state.mode = "seed";
     const ws = openWs("seed");
     ws.onopen = () => {
-      $("seed-label").textContent = state.label;
+      applySeedWaitLabel();
       clearTimers();
       if (state.nearbySend) {
         setLoading("", true);
@@ -1102,6 +1116,7 @@
     updateZipButton();
     $("your-pick").textContent = "";
     $("seed-label").textContent = "";
+    $("seed-label").classList.remove("wait-name", "wait-emoji");
     objectUrls.forEach((url) => URL.revokeObjectURL(url));
     objectUrls.clear();
     queue.length = 0;

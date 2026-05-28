@@ -22,7 +22,7 @@
   const NEARBY_INTERVAL_MS = 8000;
   const MANUAL_HINT_AFTER_MS = 11000;
   const DEVICE_FRESH_MS = 15000;
-  const LEVEL_TRANSITION_DELAY_MS = 420;
+  const LEVEL_TRANSITION_DELAY_MS = 220;
   const NAME_CHECK_DELAY_MS = 360;
 
   let first = null;
@@ -1039,7 +1039,6 @@
     ids = [];
     busy = true;
     if (activeGlobe && btn && Number.isInteger(btn.globeKey)) activeGlobe.setSelected(btn.globeKey);
-    if (activeGlobe && typeof activeGlobe.spinTransition === "function") activeGlobe.spinTransition();
     renderCrumb();
     renderGuideSequence();
     setTimeout(() => {
@@ -1126,7 +1125,6 @@
     }
     busy = true;
     if (activeGlobe && btn && Number.isInteger(btn.globeKey)) activeGlobe.setSelected(btn.globeKey);
-    if (activeGlobe && typeof activeGlobe.spinTransition === "function") activeGlobe.spinTransition();
     if (btn && btn.classList) btn.classList.add("sel");
     ids.push(e.id);
     glyphs.push(e.symbol);
