@@ -19,7 +19,7 @@
   const roomNameOpen = document.getElementById("room-name-open");
   const ROOM_SWIPE_MIN_RATIO = 0.58;
   const ROOM_SWIPE_CENTER_RATIO = 0.34;
-  const NEARBY_INTERVAL_MS = 5000;
+  const NEARBY_INTERVAL_MS = 8000;
   const MANUAL_HINT_AFTER_MS = 11000;
   const DEVICE_FRESH_MS = 15000;
   const LEVEL_TRANSITION_DELAY_MS = 420;
@@ -432,6 +432,7 @@
 
   async function sendNearby(present) {
     if (!nearby || !nearbyText) return;
+    if (present && document.hidden) return;
     try {
       const res = await fetch("/api/nearby", {
         method: "POST",
