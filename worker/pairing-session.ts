@@ -144,6 +144,16 @@ export async function handleNamedSession(req: Request, deps: PairingDeps): Promi
   return Response.json({ ok: true, available: true, token });
 }
 
+export async function handleNamedCheck(url: URL, deps: PairingDeps): Promise<Response> {
+  if (!deps.pepper) return Response.json({ ok: false, reason: "server-misconfig" }, { status: 500 });
+
+  const name = normalizeRoomName(url.searchParams.get("name") || "");
+  if (!name) return Response.json({ ok: false, reason: "bad-name" }, { status: 400 });
+
+  const active = await activeNamedRoom(name, deps, currentBucket());
+  return Response.json({ ok: true, active: active !== null });
+}
+
 export function openRoomKey(token: string, pepper: string | undefined): Promise<string | null> {
   return openRoomKeyToken(token, pepper);
 }

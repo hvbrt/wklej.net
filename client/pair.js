@@ -16,12 +16,14 @@
   const nameCreate = document.getElementById("room-name-create");
   const nameJoin = document.getElementById("room-name-join");
   const nameClose = document.getElementById("room-name-close");
+  const roomNameOpen = document.getElementById("room-name-open");
   const ROOM_SWIPE_MIN_RATIO = 0.58;
   const ROOM_SWIPE_CENTER_RATIO = 0.34;
   const NEARBY_INTERVAL_MS = 5000;
   const MANUAL_HINT_AFTER_MS = 11000;
   const DEVICE_FRESH_MS = 15000;
-  const LEVEL_TRANSITION_DELAY_MS = 330;
+  const LEVEL_TRANSITION_DELAY_MS = 420;
+  const NAME_CHECK_DELAY_MS = 360;
 
   let first = null;
   let ids = [];
@@ -40,6 +42,9 @@
   let activeGlobe = null;
   let activeGuide = null;
   let activeInviteId = "";
+  let nameIntent = "create";
+  let nameCheckTimer = 0;
+  let nameCheckSeq = 0;
   const seenInvites = new Set();
   const nearbyDrafts = new Map();
 
@@ -120,7 +125,6 @@
 
   function prepareGrid(moveMode, level) {
     clearTimeout(transitionTimer);
-    if (activeGlobe && typeof activeGlobe.spinTransition === "function") activeGlobe.spinTransition();
     grid.className = "grid grid-loading";
   }
 
@@ -133,6 +137,27 @@
   function clearGrid() {
     destroyGlobe();
     grid.textContent = "";
+  }
+
+  function preloadAssets(items) {
+    const urls = [...new Set(items.map((item) => item.asset).filter(Boolean))];
+    if (!urls.length) return Promise.resolve();
+    const loads = urls.map((url) =>
+      new Promise((resolve) => {
+        const img = new Image();
+        let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          resolve();
+        };
+        img.onload = finish;
+        img.onerror = finish;
+        img.src = url;
+        if (img.decode) img.decode().then(finish, finish);
+      }),
+    );
+    return Promise.race([Promise.all(loads), new Promise((resolve) => setTimeout(resolve, 420))]);
   }
 
   function destroyGlobe() {
@@ -607,7 +632,7 @@
 
   function showNameRoomModal() {
     if (!nameModal || busy || !done || activeGuide) return;
-    if (nameStatus) nameStatus.textContent = "use a non-obvious name";
+    updateNameRoomState(true);
     nameModal.hidden = false;
     nameModal.classList.add("show");
     requestAnimationFrame(() => {
@@ -620,14 +645,65 @@
 
   function hideNameRoomModal() {
     if (!nameModal) return;
+    clearTimeout(nameCheckTimer);
+    nameCheckSeq++;
     nameModal.classList.remove("show");
     nameModal.hidden = true;
+  }
+
+  function isValidRoomName(name) {
+    return name.length >= 4 && name.length <= 40 && new Set(name.replace(/[^a-z0-9]/g, "")).size >= 2;
+  }
+
+  function setNameRoomIntent(intent, status) {
+    nameIntent = intent === "join" ? "join" : "create";
+    if (nameCreate) {
+      nameCreate.textContent = nameIntent;
+      nameCreate.dataset.intent = nameIntent;
+    }
+    if (nameStatus) nameStatus.textContent = status || (nameIntent === "join" ? "room found" : "ready to create");
+  }
+
+  function updateNameRoomState(immediate) {
+    if (!nameInput) return;
+    const normalized = normalizeRoomName(nameInput.value);
+    clearTimeout(nameCheckTimer);
+    nameCheckSeq++;
+    if (!isValidRoomName(normalized)) {
+      setNameRoomIntent("create", "4-40 chars, avoid obvious names");
+      if (nameCreate) nameCreate.disabled = true;
+      return;
+    }
+    if (nameCreate) nameCreate.disabled = true;
+    setNameRoomIntent("create", normalized !== nameInput.value ? "unsupported chars will be ignored" : "checking…");
+    const run = nameCheckSeq;
+    const delay = immediate ? 0 : NAME_CHECK_DELAY_MS;
+    nameCheckTimer = setTimeout(() => checkNameRoom(normalized, run), delay);
+  }
+
+  async function checkNameRoom(name, run) {
+    let d;
+    try {
+      const res = await fetch(`/api/name-check?name=${encodeURIComponent(name)}`);
+      d = await res.json();
+    } catch {
+      if (run === nameCheckSeq) {
+        if (nameCreate) nameCreate.disabled = false;
+        setNameRoomIntent("create", "offline check failed");
+      }
+      return;
+    }
+    if (run !== nameCheckSeq) return;
+    if (nameCreate) nameCreate.disabled = false;
+    if (d && d.ok && d.active === true) setNameRoomIntent("join", "room found");
+    else if (d && d.reason === "rate-limited") setNameRoomIntent("create", "slow down");
+    else setNameRoomIntent("create", "ready to create");
   }
 
   function submitNameRoom(intent) {
     if (busy || !done || !nameInput) return;
     const name = normalizeRoomName(nameInput.value);
-    if (name.length < 4 || name.length > 40 || new Set(name.replace(/[^a-z0-9]/g, "")).size < 2) {
+    if (!isValidRoomName(name)) {
       if (nameStatus) nameStatus.textContent = "4-40 chars, avoid obvious names";
       nameInput.focus();
       return;
@@ -933,6 +1009,8 @@
         slot: cellIndex,
       };
     });
+    await preloadAssets(items);
+    if (run !== seq) return;
     renderEmojiGlobe(items, 0, true);
     revealGrid(true, 0);
   }
@@ -1033,6 +1111,8 @@
         slot: cellIndex,
       };
     });
+    await preloadAssets(items);
+    if (run !== seq) return;
     renderEmojiGlobe(items, level, false);
     revealGrid(false, level);
   }
@@ -1115,8 +1195,9 @@
   }
 
   if (backBtn) backBtn.addEventListener("click", back);
-  if (nameCreate) nameCreate.addEventListener("click", () => submitNameRoom("create"));
-  if (nameJoin) nameJoin.addEventListener("click", () => submitNameRoom("join"));
+  if (roomNameOpen) roomNameOpen.addEventListener("click", showNameRoomModal);
+  if (nameCreate) nameCreate.addEventListener("click", () => submitNameRoom(nameIntent));
+  if (nameJoin) nameJoin.hidden = true;
   if (nameClose) nameClose.addEventListener("click", hideNameRoomModal);
   if (nameModal) {
     nameModal.addEventListener("click", (ev) => {
@@ -1124,14 +1205,11 @@
     });
   }
   if (nameInput) {
-    nameInput.addEventListener("input", () => {
-      const value = normalizeRoomName(nameInput.value);
-      if (nameStatus) nameStatus.textContent = value && value !== nameInput.value ? "unsupported chars will be ignored" : "use a non-obvious name";
-    });
+    nameInput.addEventListener("input", () => updateNameRoomState(false));
     nameInput.addEventListener("keydown", (ev) => {
       if (ev.key === "Enter") {
         ev.preventDefault();
-        submitNameRoom("join");
+        submitNameRoom(nameIntent);
       } else if (ev.key === "Escape") {
         ev.preventDefault();
         hideNameRoomModal();

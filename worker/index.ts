@@ -3,6 +3,7 @@
 //   GET  /api/tree                 -> rotating emoji tree options
 //   POST /api/nearby { id,present } -> short-lived anonymous same-network hint
 //   POST /api/session { m1, path } -> room availability + opaque room token
+//   GET  /api/name-check?name=... -> custom-name active probe, no token
 //   POST /api/name-session { name,intent } -> custom-name room token
 //   POST /api/end { token,endKey } -> participant-authenticated teardown
 //   GET  /ws?token=...&role=...   -> WebSocket signaling upgrade
@@ -11,10 +12,10 @@
 // The Worker is signaling-only. Text and files travel over WebRTC DataChannel.
 // Room keys stay server-side and enter the Durable Object only via X-Room-Key.
 
-import { allowCreate, allowJoin, allowNamedSession, updateNearbyPresence, type NearbyRequest } from "./rate-limit";
+import { allowCreate, allowJoin, allowNamedCheck, allowNamedSession, updateNearbyPresence, type NearbyRequest } from "./rate-limit";
 import { DurableRoom } from "./durable-room";
 import { RateLimit } from "./rate-limit-do";
-import { handleNamedSession, handlePairSession, handleTree, openRoomKey, type PairingDeps } from "./pairing-session";
+import { handleNamedCheck, handleNamedSession, handlePairSession, handleTree, openRoomKey, type PairingDeps } from "./pairing-session";
 import { mintIceServers, type IceMode, type TurnEnv } from "./turn";
 
 export { DurableRoom, RateLimit };
@@ -59,6 +60,10 @@ export default {
       return handleNameSession(req, env, ip);
     }
 
+    if (url.pathname === "/api/name-check" && req.method === "GET") {
+      return handleNameCheck(req, url, env, ip);
+    }
+
     if (url.pathname === "/api/end" && req.method === "POST") {
       return handleEnd(req, env);
     }
@@ -95,6 +100,13 @@ async function handleNameSession(req: Request, env: Env, ip: string): Promise<Re
     return json(req, { ok: false, reason: "rate-limited" }, { status: 429 });
   }
   return withSecurityHeaders(req, await handleNamedSession(req, pairingDeps(env)));
+}
+
+async function handleNameCheck(req: Request, url: URL, env: Env, ip: string): Promise<Response> {
+  if (!(await allowNamedCheck(env.RATELIMIT, ip))) {
+    return json(req, { ok: false, reason: "rate-limited" }, { status: 429 });
+  }
+  return withSecurityHeaders(req, await handleNamedCheck(url, pairingDeps(env)));
 }
 
 async function handleNearby(req: Request, env: Env, ip: string): Promise<Response> {

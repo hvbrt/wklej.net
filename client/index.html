@@ -21,6 +21,10 @@
 
         <div class="moji-connect" aria-label="moji connect"><span class="moji-part">moji</span><span class="connect-part">connect</span></div>
         <p class="hint pair-instructions">TAKE THREE</p>
+        <div class="pair-actions" aria-label="pairing options">
+          <button id="page-info" class="pair-action" type="button" aria-label="instructions" title="instructions" aria-haspopup="dialog">i</button>
+          <button id="room-name-open" class="pair-action" type="button" aria-label="named room" title="named room" aria-haspopup="dialog">+</button>
+        </div>
         <div class="pair-meta">
           <span id="pair-crumb" class="pair-crumb"></span>
           <button id="pair-back" class="btn ghost tiny" type="button" hidden>wstecz</button>
@@ -45,7 +49,6 @@
             />
             <div class="room-name-actions">
               <button id="room-name-create" class="room-name-action primary" type="button">create</button>
-              <button id="room-name-join" class="room-name-action" type="button">join</button>
             </div>
             <p id="room-name-status" class="room-name-status">use a non-obvious name</p>
           </div>
@@ -132,7 +135,6 @@
     </main>
 
     <button id="page-refresh" class="page-refresh" type="button" aria-label="refresh" title="refresh" aria-live="off">↻</button>
-    <button id="page-info" class="page-info" type="button" aria-label="instructions" title="instructions" aria-haspopup="dialog">i</button>
 
     <div id="info-modal" class="info-modal" hidden>
       <div class="info-card" role="dialog" aria-modal="true" aria-labelledby="info-title">

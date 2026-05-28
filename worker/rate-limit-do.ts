@@ -13,6 +13,7 @@ const LIMITS: Record<string, number> = {
   create: 10, // create room: 10/min
   join: 24, // join room: 24/min
   name: 8, // custom-name attempts: 8/min
+  nameCheck: 36, // custom-name availability probes: 36/min
 };
 
 interface Counter {

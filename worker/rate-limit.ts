@@ -19,7 +19,7 @@ function hashNearbyNetwork(ip: string): Promise<string> {
 async function check(
   rl: DurableObjectNamespace,
   ip: string,
-  action: "create" | "join" | "name",
+  action: "create" | "join" | "name" | "nameCheck",
 ): Promise<boolean> {
   const id = rl.idFromName(await hashIp(ip));
   const stub = rl.get(id);
@@ -38,6 +38,10 @@ export function allowJoin(rl: DurableObjectNamespace, ip: string): Promise<boole
 
 export function allowNamedSession(rl: DurableObjectNamespace, ip: string): Promise<boolean> {
   return check(rl, ip, "name");
+}
+
+export function allowNamedCheck(rl: DurableObjectNamespace, ip: string): Promise<boolean> {
+  return check(rl, ip, "nameCheck");
 }
 
 export interface NearbySelection {
