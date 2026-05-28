@@ -52,7 +52,7 @@
   let nameCheckTimer = 0;
   let nameCheckSeq = 0;
   let firstLevelCache = null;
-  let nearbyDevicesSignature = "";
+  let nearbyDeviceRows = new Map();
   const seenInvites = new Set();
   const nearbyDrafts = new Map();
 
@@ -528,55 +528,97 @@
   function renderNearbyDevices(devices) {
     if (!nearbyList) return;
     if (activeGuide) {
-      nearbyDevicesSignature = "";
+      nearbyDeviceRows.clear();
       nearbyList.textContent = "";
       return;
     }
-    const visibleDevices = devices.slice(0, 3);
-    const signature = visibleDevices.map((device) => `${device.id}:${device.label || ""}`).join("|");
-    if (signature && signature === nearbyDevicesSignature && nearbyList.children.length) return;
-    nearbyDevicesSignature = signature;
-    nearbyList.textContent = "";
-    for (const device of visibleDevices) {
-      const label = String(device.label || "urządzenie obok");
-      const kind = deviceKind(label);
-      const draft = nearbyDraft(device.id);
-      const row = document.createElement("div");
-      row.className = `nearby-device ${kind === "phone" ? "phone" : "computer"}`;
-      row.addEventListener("click", (ev) => {
-        if (ev.target && ev.target.closest && ev.target.closest(".nearby-composer")) return;
-        startNearbySend(device);
-      });
-
-      const deviceButton = document.createElement("button");
-      deviceButton.type = "button";
-      deviceButton.className = "nearby-device-main nearby-device-action";
-      deviceButton.setAttribute("aria-label", `połącz z ${label}`);
-      deviceButton.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        startNearbySend(device);
-      });
-
-      const avatar = document.createElement("div");
-      avatar.className = `nearby-avatar nearby-avatar-${kind === "phone" ? "phone" : "computer"}`;
-      avatar.setAttribute("aria-hidden", "true");
-
-      const main = document.createElement("div");
-      main.className = "nearby-main";
-      const name = document.createElement("div");
-      name.className = "nearby-name";
-      const labelText = document.createElement("span");
-      labelText.className = "nearby-label-text";
-      labelText.textContent = label;
-      name.appendChild(labelText);
-      main.appendChild(name);
-
-      deviceButton.appendChild(avatar);
-      deviceButton.appendChild(main);
-      row.appendChild(deviceButton);
-      row.appendChild(renderNearbyComposer(device, draft));
-      nearbyList.appendChild(row);
+    const focusedComposer =
+      document.activeElement &&
+      nearbyList.contains(document.activeElement) &&
+      document.activeElement.closest(".nearby-composer");
+    if (focusedComposer) {
+      return;
     }
+    const visibleDevices = devices.slice(0, 3);
+    const nextIds = new Set();
+    const fragment = document.createDocumentFragment();
+    for (const device of visibleDevices) {
+      nextIds.add(device.id);
+      let row = nearbyDeviceRows.get(device.id);
+      if (!row) {
+        row = createNearbyDeviceRow(device);
+        nearbyDeviceRows.set(device.id, row);
+      } else {
+        updateNearbyDeviceRow(row, device);
+      }
+      fragment.appendChild(row);
+    }
+    for (const [id, row] of nearbyDeviceRows) {
+      if (!nextIds.has(id)) {
+        nearbyDeviceRows.delete(id);
+        row.remove();
+      }
+    }
+    nearbyList.replaceChildren(fragment);
+  }
+
+  function createNearbyDeviceRow(device) {
+    const label = String(device.label || "urządzenie obok");
+    const kind = deviceKind(label);
+    const draft = nearbyDraft(device.id);
+    const row = document.createElement("div");
+    row.className = `nearby-device ${kind === "phone" ? "phone" : "computer"}`;
+    row.nearbyDevice = device;
+    row.addEventListener("click", (ev) => {
+      if (ev.target && ev.target.closest && ev.target.closest(".nearby-composer")) return;
+      startNearbySend(row.nearbyDevice || device);
+    });
+
+    const deviceButton = document.createElement("button");
+    deviceButton.type = "button";
+    deviceButton.className = "nearby-device-main nearby-device-action";
+    deviceButton.setAttribute("aria-label", `połącz z ${label}`);
+    deviceButton.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      startNearbySend(row.nearbyDevice || device);
+    });
+
+    const avatar = document.createElement("div");
+    avatar.className = `nearby-avatar nearby-avatar-${kind === "phone" ? "phone" : "computer"}`;
+    avatar.setAttribute("aria-hidden", "true");
+
+    const main = document.createElement("div");
+    main.className = "nearby-main";
+    const name = document.createElement("div");
+    name.className = "nearby-name";
+    const labelText = document.createElement("span");
+    labelText.className = "nearby-label-text";
+    labelText.textContent = label;
+    name.appendChild(labelText);
+    main.appendChild(name);
+
+    deviceButton.appendChild(avatar);
+    deviceButton.appendChild(main);
+    row.appendChild(deviceButton);
+    row.appendChild(renderNearbyComposer(device, draft));
+    return row;
+  }
+
+  function updateNearbyDeviceRow(row, device) {
+    const label = String(device.label || "urządzenie obok");
+    const kind = deviceKind(label);
+    row.nearbyDevice = device;
+    row.classList.toggle("phone", kind === "phone");
+    row.classList.toggle("computer", kind !== "phone");
+    const avatar = row.querySelector(".nearby-avatar");
+    if (avatar) {
+      avatar.classList.toggle("nearby-avatar-phone", kind === "phone");
+      avatar.classList.toggle("nearby-avatar-computer", kind !== "phone");
+    }
+    const button = row.querySelector(".nearby-device-main");
+    if (button) button.setAttribute("aria-label", `połącz z ${label}`);
+    const labelText = row.querySelector(".nearby-label-text");
+    if (labelText && labelText.textContent !== label) labelText.textContent = label;
   }
 
   function nearbyDraft(id) {
@@ -949,7 +991,7 @@
     }
     nearbyStartedAt = 0;
     nearbyLastActiveAt = 0;
-    nearbyDevicesSignature = "";
+    nearbyDeviceRows.clear();
     if (nearbyList) nearbyList.textContent = "";
     if (notify) sendNearby(false);
   }
@@ -1219,7 +1261,7 @@
     pickedAssets = [];
     bucket = null;
     firstLevelCache = null;
-    nearbyDevicesSignature = "";
+    nearbyDeviceRows.clear();
     done = null;
     busy = false;
     activeGuide = null;
