@@ -406,7 +406,7 @@ body {
 .pair-instruction-row {
   width: fit-content;
   margin: 2px auto 7px;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 9px;
@@ -426,7 +426,7 @@ body {
 .pair-actions {
   width: fit-content;
   margin: 0 auto 7px;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
