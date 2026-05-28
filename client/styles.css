@@ -53,7 +53,7 @@
   --shadow: 0 20px 60px -20px rgba(40,30,90,0.35);
   --lockup-width: 184px;
   --lockup-gap: 22px;
-  --brand-letter-gap: clamp(9px, 2.65vw, 14px);
+  --pair-field-width: 414px;
   --logo-dot-size: 16px;
   --emoji-tile:
     radial-gradient(circle at 36% 20%, rgba(255,255,255,.38), transparent 34%),
@@ -290,24 +290,25 @@ body {
 .brand { text-align: center; margin-bottom: 16px; }
 .brand.compact { margin-bottom: 8px; }
 .brand h1 {
-  width: 100%;
-  max-width: 100%;
+  width: min(100%, var(--pair-field-width));
   margin: 0 auto 2px;
-  padding: 0 2px;
+  padding: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--logo-dot-size) minmax(0, 1fr);
   align-items: baseline;
   justify-content: center;
-  column-gap: clamp(7px, 2vw, 12px);
+  column-gap: clamp(8px, 2.2vw, 12px);
   font-family: var(--disp);
   font-size: clamp(30px, 9.8vw, 42px);
   letter-spacing: 0.15px;
 }
 .brand-word,
 .tld {
+  width: 100%;
   display: inline-flex;
   align-items: baseline;
-  gap: var(--brand-letter-gap);
+  justify-content: space-between;
+  gap: 0;
   letter-spacing: 0;
   font-kerning: none;
   font-variant-ligatures: none;
@@ -531,7 +532,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 }
 .emoji-field-shell {
   position: relative;
-  width: min(100%, 414px);
+  width: min(100%, var(--pair-field-width));
   min-height: clamp(252px, 64vw, 322px);
   isolation: isolate;
 }
@@ -1708,15 +1709,15 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 .x { font-size: 46px; color: var(--bad); line-height: 1; margin-bottom: 6px; }
 
 @media (max-width: 380px) {
+  :root { --pair-field-width: 344px; }
   .stage { padding: 12px 14px calc(84px + env(safe-area-inset-bottom)); }
   .page-refresh { bottom: calc(20px + env(safe-area-inset-bottom)); width: 40px; height: 40px; }
   .page-refresh { font-size: 21px; }
   .glass { padding: 22px 16px; }
   .pairing-card { margin-bottom: 22px; padding: 12px 14px 16px; }
   .brand h1 { font-size: clamp(28px, 9.2vw, 38px); }
-  .brand h1 { --brand-letter-gap: clamp(7px, 2.45vw, 11px); }
   .pair-crumb { font-size: 22px; letter-spacing: 4px; }
   .grid { min-height: 264px; }
-  .emoji-field-shell { width: min(100%, 344px); min-height: 238px; }
+  .emoji-field-shell { min-height: 238px; }
   .emoji-map-viewport { height: 236px; border-radius: 26px; }
 }
