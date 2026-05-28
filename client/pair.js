@@ -27,7 +27,7 @@
   const LEVEL_TRANSITION_DELAY_MS = 150;
   const NAME_CHECK_DELAY_MS = 360;
   const BUCKET_MS = 60000;
-  const ASSET_PRELOAD_BUDGET_MS = 220;
+  const ASSET_PRELOAD_BUDGET_MS = 120;
   const SHORTCUT_TEXT_LIMIT = 8000;
   const SHORTCUT_FILE_LIMIT = 6 * 1024 * 1024;
   const SHORTCUT_PAYLOAD_CHANNEL = "wklej-shortcut-payload-v1";
@@ -188,6 +188,21 @@
     activeGlobe = null;
   }
 
+  function reserveNearbySlot() {
+    if (!nearby) return;
+    nearby.hidden = false;
+    nearby.classList.add("nearby-reserve");
+    nearby.classList.remove("active");
+    nearby.classList.remove("nearby-manual");
+    nearby.classList.remove("nearby-privacy");
+    if (nearbyText) nearbyText.textContent = "nearby";
+    if (nearbyList) nearbyList.textContent = "";
+    if (nearbyInvite) {
+      nearbyInvite.hidden = true;
+      nearbyInvite.textContent = "";
+    }
+  }
+
   const FIELD_SLOTS = [
     { x: 12, y: 31 },
     { x: 27, y: 18 },
@@ -296,6 +311,8 @@
         const img = document.createElement("img");
         img.src = item.asset;
         img.alt = item.symbol;
+        img.width = 62;
+        img.height = 62;
         img.decoding = "async";
         img.loading = "eager";
         button.appendChild(img);
@@ -1224,6 +1241,8 @@
         img.className = "nearby-seq-emoji";
         img.src = asset;
         img.alt = glyph;
+        img.width = 24;
+        img.height = 24;
         img.loading = "lazy";
         img.decoding = "async";
         item.appendChild(img);
@@ -1262,6 +1281,7 @@
     if (!nearby) return;
     stopNearby(false);
     nearby.hidden = false;
+    nearby.classList.remove("nearby-reserve");
     nearby.classList.remove("active");
     nearby.classList.remove("nearby-manual");
     if (nearbyText) nearbyText.textContent = "nearby";
@@ -1279,6 +1299,7 @@
     nearbyKickTimer = 0;
     if (nearby) {
       nearby.hidden = true;
+      nearby.classList.remove("nearby-reserve");
       nearby.classList.remove("active");
       nearby.classList.remove("nearby-manual");
       nearby.classList.remove("nearby-privacy");
@@ -1583,6 +1604,7 @@
     installShortcutWatcher();
     const launch = shortcutLaunchFromUrl();
     if (startShortcutAttach(launch) || startShortcutLaunch(launch)) return;
+    reserveNearbySlot();
     renderPalette();
     setTimeout(startNearby, 900);
   }

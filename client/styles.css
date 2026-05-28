@@ -1004,6 +1004,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   filter: drop-shadow(0 12px 22px rgba(109,94,252,.2));
 }
 .nearby-assist { width: 100%; max-width: 340px; margin: 0 auto 6px; padding: 0; display: grid; gap: 7px; border: 0; border-radius: 0; color: var(--muted); background: transparent; font-family: var(--disp); font-size: 11px; font-weight: 700; text-align: left; }
+.nearby-assist.nearby-reserve { visibility: hidden; pointer-events: none; }
 .nearby-assist.active { color: var(--ink); background: transparent; }
 .nearby-assist.nearby-manual { color: var(--ink); background: transparent; }
 .nearby-head { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 20px; text-align: center; }
