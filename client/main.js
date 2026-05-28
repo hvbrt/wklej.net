@@ -676,17 +676,19 @@
     const el = $("transport");
     if (!el) return;
     const kind = typeof info === "string" ? info : info && info.transport;
+    const mode = typeof info === "object" && info ? info.mode : "";
     lastTransportKind = kind || "";
-    const cls = kind === "direct" ? "direct" : kind === "turn" || kind === "relay" ? "relay" : kind === "repair" ? "repair" : kind === "bad" ? "bad" : "pending";
+    const cls = kind === "direct" ? "direct" : kind === "relay" ? "relay" : kind === "repair" ? "repair" : kind === "bad" ? "bad" : "pending";
     el.className = "badge transport " + cls;
     if (cls === "pending") el.textContent = "…";
     else if (cls === "repair") el.textContent = pending ? "p2p…" : "p2p";
     else if (cls === "bad") el.textContent = "error";
+    else if (cls === "relay" && mode === "relay") el.textContent = `private relay${pending ? "…" : ""}`;
     else el.textContent = `${cls}${pending ? "…" : ""}`;
   }
 
   function onTransport(info) {
-    if (!info || (info.transport !== "direct" && info.transport !== "turn" && info.transport !== "relay")) return;
+    if (!info || (info.transport !== "direct" && info.transport !== "relay")) return;
     setTransport(info, false);
   }
 

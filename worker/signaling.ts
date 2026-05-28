@@ -2,7 +2,7 @@
 // two peers. It NEVER relays application payload — payload travels P2P over
 // the RTCDataChannel exclusively.
 
-import type { WSMessage } from "./room-state";
+import type { IceSignalMode, WSMessage } from "./room-state";
 
 const RELAY_TYPES = new Set(["offer", "answer", "ice-candidate"]);
 const MAX_SDP_CHARS = 64_000;
@@ -16,11 +16,11 @@ export function sanitizeRelay(msg: WSMessage): WSMessage | null {
   switch (msg.type) {
     case "offer": {
       const sdp = sanitizeSdp(msg.sdp, "offer");
-      return sdp ? { type: "offer", sdp } : null;
+      return sdp ? { type: "offer", sdp, ...sanitizeIceModeField(msg.iceMode) } : null;
     }
     case "answer": {
       const sdp = sanitizeSdp(msg.sdp, "answer");
-      return sdp ? { type: "answer", sdp } : null;
+      return sdp ? { type: "answer", sdp, ...sanitizeIceModeField(msg.iceMode) } : null;
     }
     case "ice-candidate": {
       const candidate = sanitizeCandidate(msg.candidate);
@@ -29,6 +29,10 @@ export function sanitizeRelay(msg: WSMessage): WSMessage | null {
     default:
       return null;
   }
+}
+
+function sanitizeIceModeField(value: unknown): { iceMode: IceSignalMode } | Record<string, never> {
+  return value === "direct" || value === "relay" ? { iceMode: value } : {};
 }
 
 function sanitizeSdp(value: unknown, expectedType: "offer" | "answer"): { type: string; sdp: string } | null {

@@ -2,6 +2,7 @@
 
 export type Phase = "waiting-peer" | "connected";
 export type Role = "seed" | "peer";
+export type IceSignalMode = "direct" | "relay";
 
 export interface FirstMove {
   id: number;
@@ -39,8 +40,8 @@ export interface SocketMeta {
 
 export type WSMessage =
   | { type: "peer-joined" }
-  | { type: "offer"; sdp: unknown }
-  | { type: "answer"; sdp: unknown }
+  | { type: "offer"; sdp: unknown; iceMode?: unknown }
+  | { type: "answer"; sdp: unknown; iceMode?: unknown }
   | { type: "ice-candidate"; candidate: unknown }
   | { type: "session-expired" }
   | { type: "session-extended"; expiresAt: number }

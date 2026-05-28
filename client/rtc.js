@@ -19,13 +19,17 @@
   function requestedIceMode() {
     const params = new URLSearchParams(location.search);
     const mode = params.get("ice");
-    return mode === "direct" || mode === "turn" || mode === "relay" ? mode : "auto";
+    return mode === "direct" || mode === "relay" ? mode : "auto";
   }
 
   function localIceMode() {
     const explicit = requestedIceMode();
     if (explicit !== "auto") return explicit;
     return "auto";
+  }
+
+  function signalIceMode(value) {
+    return value === "direct" || value === "relay" ? value : "";
   }
 
   // Auto starts with direct STUN/P2P. If direct cannot open the channel, both
@@ -377,7 +381,13 @@
   async function processSignal(msg) {
     if (!pc) return;
     if (msg.type === "offer") {
-      if (pc.remoteDescription && !isOpen() && preferredMode === "auto" && !fallbackStarted) {
+      const remoteMode = signalIceMode(msg.iceMode);
+      if (remoteMode === "relay" && activeMode !== "relay") {
+        fallbackStarted = true;
+        clearFallbackTimer();
+        cb.onFallback && cb.onFallback("remote-relay");
+        await replacePeer("relay");
+      } else if (pc.remoteDescription && !isOpen() && preferredMode === "auto" && !fallbackStarted) {
         fallbackStarted = true;
         clearFallbackTimer();
         cb.onFallback && cb.onFallback("remote-offer");
@@ -387,7 +397,7 @@
       await flushIce();
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      sendSignal({ type: "answer", sdp: pc.localDescription });
+      sendSignal({ type: "answer", sdp: pc.localDescription, iceMode: activeMode });
     } else if (msg.type === "answer") {
       await pc.setRemoteDescription(msg.sdp);
       await flushIce();
@@ -421,7 +431,7 @@
     if (!pc) return;
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    sendSignal({ type: "offer", sdp: pc.localDescription });
+    sendSignal({ type: "offer", sdp: pc.localDescription, iceMode: activeMode });
   }
 
   function scheduleAutoFallback() {
@@ -529,7 +539,7 @@
     const remoteType = remote.candidateType || "";
     const relayUsed = localType === "relay" || remoteType === "relay";
     const known = localType || remoteType;
-    const transport = activeMode === "relay" && relayUsed ? "relay" : relayUsed ? "turn" : known ? "direct" : "unknown";
+    const transport = relayUsed ? "relay" : known ? "direct" : "unknown";
 
     return {
       transport,

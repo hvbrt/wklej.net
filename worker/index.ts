@@ -358,7 +358,7 @@ function hasTurnServer(iceServers: Array<{ urls: string | string[] }>): boolean 
 }
 
 function parseIceMode(value: string | null): IceMode {
-  return value === "turn" || value === "relay" ? value : "direct";
+  return value === "relay" ? "relay" : "direct";
 }
 
 function withSecurityHeaders(req: Request, res: Response): Response {

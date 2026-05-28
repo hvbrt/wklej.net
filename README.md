@@ -89,7 +89,7 @@ npx wrangler secret put TURN_KEY_ID
 npx wrangler secret put TURN_KEY_API_TOKEN
 ```
 
-Create a Cloudflare Realtime TURN key in the Cloudflare dashboard or API, then store the returned TURN Token ID as `TURN_KEY_ID` and the returned API token/key as `TURN_KEY_API_TOKEN`. Without these secrets, `/api/ice?mode=turn` falls back to direct STUN and `/api/ice?mode=relay` fails closed with `turn-unavailable`.
+Create a Cloudflare Realtime TURN key in the Cloudflare dashboard or API, then store the returned TURN Token ID as `TURN_KEY_ID` and the returned API token/key as `TURN_KEY_API_TOKEN`. Without these secrets, `/api/ice?mode=relay` fails closed with `turn-unavailable`.
 
 ## Development
 
