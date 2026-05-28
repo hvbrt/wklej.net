@@ -257,7 +257,7 @@
       clearTimeout(switchTimer);
       switchTimer = window.setTimeout(() => {
         if (!destroyed) viewport.classList.remove("is-switching");
-      }, 560);
+      }, 820);
     }
 
     function localY(clientY) {
