@@ -19,11 +19,15 @@
   const roomNameOpen = document.getElementById("room-name-open");
   const ROOM_SWIPE_MIN_RATIO = 0.58;
   const ROOM_SWIPE_CENTER_RATIO = 0.34;
-  const NEARBY_INTERVAL_MS = 8000;
+  const NEARBY_FAST_INTERVAL_MS = 1000;
+  const NEARBY_IDLE_INTERVAL_MS = 8000;
+  const NEARBY_FAST_WINDOW_MS = 30000;
   const MANUAL_HINT_AFTER_MS = 11000;
   const DEVICE_FRESH_MS = 15000;
   const LEVEL_TRANSITION_DELAY_MS = 220;
   const NAME_CHECK_DELAY_MS = 360;
+  const BUCKET_MS = 60000;
+  const ASSET_PRELOAD_BUDGET_MS = 220;
 
   let first = null;
   let ids = [];
@@ -37,6 +41,8 @@
   let nearbyTimer = 0;
   let nearbyKickTimer = 0;
   let nearbyStartedAt = 0;
+  let nearbyLastActiveAt = 0;
+  let nearbyInFlight = false;
   let wrongTimer = 0;
   let nearbyId = "";
   let activeGlobe = null;
@@ -45,6 +51,7 @@
   let nameIntent = "create";
   let nameCheckTimer = 0;
   let nameCheckSeq = 0;
+  let firstLevelCache = null;
   const seenInvites = new Set();
   const nearbyDrafts = new Map();
 
@@ -153,11 +160,11 @@
         };
         img.onload = finish;
         img.onerror = finish;
+        img.decoding = "async";
         img.src = url;
-        if (img.decode) img.decode().then(finish, finish);
       }),
     );
-    return Promise.race([Promise.all(loads), new Promise((resolve) => setTimeout(resolve, 420))]);
+    return Promise.race([Promise.all(loads), new Promise((resolve) => setTimeout(resolve, ASSET_PRELOAD_BUDGET_MS))]);
   }
 
   function destroyGlobe() {
@@ -445,6 +452,33 @@
     } catch {}
   }
 
+  async function pollNearby(present) {
+    if (nearbyInFlight) return;
+    nearbyInFlight = true;
+    try {
+      await sendNearby(present);
+    } finally {
+      nearbyInFlight = false;
+    }
+  }
+
+  function nearbyPollDelay() {
+    const now = Date.now();
+    const startedRecently = nearbyStartedAt && now - nearbyStartedAt < NEARBY_FAST_WINDOW_MS;
+    const activeRecently = nearbyLastActiveAt && now - nearbyLastActiveAt < NEARBY_FAST_WINDOW_MS;
+    return startedRecently || activeRecently ? NEARBY_FAST_INTERVAL_MS : NEARBY_IDLE_INTERVAL_MS;
+  }
+
+  function scheduleNearbyPoll(delay) {
+    if (!nearbyStartedAt) return;
+    if (nearbyTimer) clearTimeout(nearbyTimer);
+    nearbyTimer = setTimeout(async () => {
+      nearbyTimer = 0;
+      await pollNearby(true);
+      scheduleNearbyPoll(nearbyPollDelay());
+    }, delay);
+  }
+
   function deviceWord(count) {
     return count === 1 ? "device" : "devices";
   }
@@ -456,6 +490,7 @@
     const privateRelay = !!(d.privacy && d.privacy.privateRelayLikely && count === 0);
     const manualFallback = !privateRelay && count === 0 && invites.length === 0 && Date.now() - nearbyStartedAt >= MANUAL_HINT_AFTER_MS;
     const manualMode = privateRelay || manualFallback;
+    if (count > 0 || invites.length > 0) nearbyLastActiveAt = Date.now();
 
     nearby.hidden = false;
     nearby.classList.toggle("active", count > 0 || invites.length > 0);
@@ -878,13 +913,14 @@
     nearby.classList.remove("nearby-manual");
     if (nearbyText) nearbyText.textContent = "nearby";
     nearbyStartedAt = Date.now();
-    sendNearby(true);
-    nearbyKickTimer = setTimeout(() => sendNearby(true), 1200);
-    nearbyTimer = setInterval(() => sendNearby(true), NEARBY_INTERVAL_MS);
+    nearbyLastActiveAt = 0;
+    pollNearby(true);
+    nearbyKickTimer = setTimeout(() => pollNearby(true), 350);
+    scheduleNearbyPoll(NEARBY_FAST_INTERVAL_MS);
   }
 
   function stopNearby(notify) {
-    if (nearbyTimer) clearInterval(nearbyTimer);
+    if (nearbyTimer) clearTimeout(nearbyTimer);
     if (nearbyKickTimer) clearTimeout(nearbyKickTimer);
     nearbyTimer = 0;
     nearbyKickTimer = 0;
@@ -895,6 +931,7 @@
       nearby.classList.remove("nearby-privacy");
     }
     nearbyStartedAt = 0;
+    nearbyLastActiveAt = 0;
     if (nearbyList) nearbyList.textContent = "";
     if (notify) sendNearby(false);
   }
@@ -953,7 +990,7 @@
   }
 
   async function randomSelection() {
-    const firstLevel = await fetchTree(null, [], null);
+    const firstLevel = usableFirstLevelCache() ? firstLevelCache : await fetchTree(null, [], null);
     const firstIndex = randomIndex(firstLevel.options.length);
     const firstEmoji = firstLevel.options[firstIndex];
     const firstMove = { id: firstEmoji.id, pos: firstIndex + 1 };
@@ -971,6 +1008,12 @@
       glyphs: [firstEmoji.symbol, secondEmoji.symbol, thirdEmoji.symbol],
       assets: [firstEmoji.asset, secondEmoji.asset, thirdEmoji.asset],
     };
+  }
+
+  function usableFirstLevelCache() {
+    if (!firstLevelCache || !Array.isArray(firstLevelCache.options) || !Number.isInteger(firstLevelCache.bucket)) return false;
+    const current = Math.floor(Date.now() / BUCKET_MS);
+    return firstLevelCache.bucket <= current && firstLevelCache.bucket >= current - 1 && firstLevelCache.options.length > 0;
   }
 
   async function renderPalette() {
@@ -997,6 +1040,7 @@
       return;
     }
     bucket = d.bucket;
+    firstLevelCache = { bucket: d.bucket, options: d.options.slice() };
 
     const layout = displayLayout(d.options.length, bucket, "1");
     const items = layout.map((optionIndex, cellIndex) => {
@@ -1156,6 +1200,7 @@
     glyphs = [];
     pickedAssets = [];
     bucket = null;
+    firstLevelCache = null;
     done = null;
     busy = false;
     activeGuide = null;

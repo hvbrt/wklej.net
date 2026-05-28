@@ -7,6 +7,7 @@ import { ATLAS } from "./atlas";
 const WINDOW_MS = 60_000;
 const PRESENCE_TTL_MS = 30_000;
 const INVITE_TTL_MS = 45_000;
+const PRESENCE_REFRESH_EVERY_MS = 8_000;
 const MAX_PRESENCE_IDS = 16;
 const MAX_INVITES = 32;
 const LIMITS: Record<string, number> = {
@@ -94,14 +95,17 @@ export class RateLimit implements DurableObject {
     if (!isPresenceId(id)) return Response.json({ nearby: 0, ttl: 0 }, { status: 400 });
 
     const now = Date.now();
-    const presence = prunePresence((await this.ctx.storage.get<Presence>(PRESENCE_KEY)) ?? {}, now);
-    const invites = pruneInvites((await this.ctx.storage.get<Invites>(INVITES_KEY)) ?? {}, presence, now);
+    const storedPresence = (await this.ctx.storage.get<Presence>(PRESENCE_KEY)) ?? {};
+    const storedInvites = (await this.ctx.storage.get<Invites>(INVITES_KEY)) ?? {};
+    const presence = prunePresence({ ...storedPresence }, now);
+    const invites = pruneInvites({ ...storedInvites }, presence, now);
+    let dirty = Object.keys(storedPresence).length !== Object.keys(presence).length || Object.keys(storedInvites).length !== Object.keys(invites).length;
 
     if (body.action === "invite") {
       const to = body.to ?? "";
       const selection = body.selection;
       if (!isPresenceId(to) || !presence[to] || !isSelection(selection)) {
-        await this.persistPresenceState(presence, invites);
+        if (dirty) await this.persistPresenceState(presence, invites);
         return Response.json(this.snapshot(id, presence, invites, { ok: false, reason: "target-gone" }), { status: 404 });
       }
       if (Object.keys(invites).length < MAX_INVITES) {
@@ -116,8 +120,9 @@ export class RateLimit implements DurableObject {
           createdAt: now,
           expiresAt: now + INVITE_TTL_MS,
         };
+        dirty = true;
       }
-      await this.persistPresenceState(presence, invites);
+      if (dirty) await this.persistPresenceState(presence, invites);
       return Response.json(this.snapshot(id, presence, invites, { ok: true }));
     }
 
@@ -125,24 +130,38 @@ export class RateLimit implements DurableObject {
       const inviteId = body.inviteId ?? "";
       if (inviteId && invites[inviteId] && (invites[inviteId]!.to === id || invites[inviteId]!.from === id)) {
         delete invites[inviteId];
+        dirty = true;
       }
-      await this.persistPresenceState(presence, invites);
+      if (dirty) await this.persistPresenceState(presence, invites);
       return Response.json(this.snapshot(id, presence, invites, { ok: true }));
     }
 
     if (present) {
       const keys = Object.keys(presence);
       if (presence[id] !== undefined || keys.length < MAX_PRESENCE_IDS) {
-        presence[id] = { expiresAt: now + PRESENCE_TTL_MS, label: cleanLabel(label) };
+        const nextLabel = cleanLabel(label);
+        const current = presence[id];
+        const refreshDue = !current || entryExpiresAt(current) - now <= PRESENCE_TTL_MS - PRESENCE_REFRESH_EVERY_MS;
+        const labelChanged = !!current && entryLabel(current) !== nextLabel;
+        if (!current || refreshDue || labelChanged) {
+          presence[id] = { expiresAt: now + PRESENCE_TTL_MS, label: nextLabel };
+          dirty = true;
+        }
       }
     } else {
-      delete presence[id];
+      if (presence[id] !== undefined) {
+        delete presence[id];
+        dirty = true;
+      }
       for (const invite of Object.values(invites)) {
-        if (invite.from === id || invite.to === id) delete invites[invite.id];
+        if (invite.from === id || invite.to === id) {
+          delete invites[invite.id];
+          dirty = true;
+        }
       }
     }
 
-    await this.persistPresenceState(presence, invites);
+    if (dirty) await this.persistPresenceState(presence, invites);
     return Response.json(this.snapshot(id, presence, invites));
   }
 
