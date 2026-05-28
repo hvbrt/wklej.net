@@ -1,6 +1,7 @@
-// WebRTC P2P transport + chunked file/text transfer protocol.
+// WebRTC P2P transport + WebCrypto E2EE chunked file/text transfer protocol.
 // Signaling (offer/answer/ice) goes over the WS; ALL application payload (text
-// and files) travels ONLY over the RTCDataChannel. The backend never sees it.
+// and files) is encrypted in the browser and travels ONLY over the RTCDataChannel.
+// The backend never sees plaintext or app-layer session keys.
 
 (function () {
   const STUN_FALLBACK = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
@@ -8,18 +9,34 @@
   const BUFFER_HIGH = 8 * 1024 * 1024; // pause sending above 8 MiB buffered
   const BUFFER_LOW = 256 * 1024; // resume when drained below 256 KiB
   const AUTO_FALLBACK_MS = 6500;
+  const E2EE_MAGIC = 0xe2;
+  const E2EE_JSON = 1;
+  const E2EE_BINARY = 2;
+  const MAX_PENDING_E2EE = 64;
+  const enc = new TextEncoder();
+  const dec = new TextDecoder();
 
   function requestedIceMode() {
-    const mode = new URLSearchParams(location.search).get("ice");
+    const params = new URLSearchParams(location.search);
+    const mode = params.get("ice");
     return mode === "direct" || mode === "turn" || mode === "relay" ? mode : "auto";
   }
 
-  // Auto starts with direct STUN/P2P. TURN is introduced only if the initial
-  // attempt cannot open the channel, so successful direct sessions stay fast.
+  function localIceMode() {
+    const explicit = requestedIceMode();
+    if (explicit !== "auto") return explicit;
+    return "auto";
+  }
+
+  // Auto starts with direct STUN/P2P. If direct cannot open the channel, both
+  // peers renegotiate through relay-only TURN.
   async function getIceConfig(mode) {
     try {
       const r = await fetch(`/api/ice?mode=${mode}`);
-      if (!r.ok) return STUN_FALLBACK;
+      if (!r.ok) {
+        if (mode === "relay") throw new Error("relay unavailable");
+        return STUN_FALLBACK;
+      }
       const d = await r.json();
       if (d && Array.isArray(d.iceServers) && d.iceServers.length) {
         const hasTurn = d.iceServers.some((s) => {
@@ -35,8 +52,10 @@
           rtcpMuxPolicy: "require",
         };
       }
+      if (mode === "relay") throw new Error("relay unavailable");
       return STUN_FALLBACK;
-    } catch {
+    } catch (err) {
+      if (mode === "relay") throw err;
       return STUN_FALLBACK;
     }
   }
@@ -51,13 +70,74 @@
   let fallbackStarted = false;
   let fallbackTimer = 0;
   let signalChain = Promise.resolve();
-  let verifyLocalNonce = "";
-  let verifyRemoteNonce = "";
-  let verifySent = false;
-  let verifyEmitted = false;
+  let e2eeKeyPair = null;
+  let e2eePublic = "";
+  let e2eeRemotePublic = "";
+  let e2eeRemoteBuild = "";
+  let e2eeKey = null;
+  let e2eeReady = false;
+  let e2eeReadyEmitted = false;
+  let e2eeNoncePrefix = new Uint8Array(8);
+  let e2eeSendSeq = 0;
+  let e2eeSasColors = null;
+  const pendingEncrypted = [];
   const canceled = new Set(); // transfer ids canceled by either side
   const incoming = new Map();
   const pendingSignals = [];
+
+  function secureId() {
+    if (crypto.randomUUID) return crypto.randomUUID();
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  function b64url(bytes) {
+    let s = "";
+    for (const b of bytes) s += String.fromCharCode(b);
+    return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  function fromB64url(value) {
+    if (typeof value !== "string" || !/^[A-Za-z0-9_-]{40,160}$/.test(value)) return null;
+    try {
+      const s = value.replace(/-/g, "+").replace(/_/g, "/");
+      const bin = atob(s + "=".repeat((4 - (s.length % 4)) % 4));
+      const out = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out;
+    } catch {
+      return null;
+    }
+  }
+
+  async function sha256Bytes(input) {
+    const bytes = typeof input === "string" ? enc.encode(input) : input;
+    return new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  }
+
+  function colorsFromBytes(bytes) {
+    return [0, 1, 2].map((index) => {
+      const offset = index * 3;
+      const hue = (bytes[offset] + bytes[offset + 1]) % 360;
+      const sat = 72 + (bytes[offset + 2] % 18);
+      const light = 42 + (bytes[offset + 9] % 16);
+      return `${hue} ${sat}% ${light}%`;
+    });
+  }
+
+  function currentBuildFingerprint() {
+    const value = document.documentElement.dataset.buildFingerprint || "";
+    return /^[A-F0-9]{4}-[A-F0-9]{4}$/.test(value) ? value : "";
+  }
+
+  function cleanBuildFingerprint(value) {
+    return typeof value === "string" && /^[A-F0-9]{4}-[A-F0-9]{4}$/.test(value) ? value : "";
+  }
+
+  function channelOpen() {
+    return channel && channel.readyState === "open";
+  }
   const pendingIce = [];
 
   function wire(ch) {
@@ -66,10 +146,7 @@
     ch.bufferedAmountLowThreshold = BUFFER_LOW;
     ch.onopen = () => {
       clearFallbackTimer();
-      sendVerificationNonce();
-      cb.onOpen && cb.onOpen();
-      emitTransport("open").catch(() => {});
-      setTimeout(() => emitTransport("settled").catch(() => {}), 1200);
+      startE2EE(ch).catch(() => closeForCryptoError());
     };
     ch.onclose = () => cb.onClose && cb.onClose();
     ch.onmessage = (ev) => handleData(ev.data);
@@ -79,30 +156,43 @@
     if (typeof data === "string") {
       let m;
       try { m = JSON.parse(data); } catch { return; }
-      if (m.t === "verify" && validVerifyNonce(m.nonce)) {
-        verifyRemoteNonce = m.nonce;
-        emitVerificationPattern().catch(() => {});
-      } else if (m.t === "msg") {
-        cb.onText && cb.onText(m.text);
-      } else if (m.t === "meta") {
-        const meta = cleanIncomingMeta(m);
-        const transfer = { id: meta.id, name: meta.name, size: meta.size, mime: meta.mime, chunks: [], received: 0 };
-        incoming.set(meta.id, transfer);
-        cb.onFileMeta && cb.onFileMeta(meta);
-      } else if (m.t === "complete") {
-        const transfer = incoming.get(m.id);
-        if (transfer) {
-          const blob = new Blob(transfer.chunks, { type: transfer.mime });
-          cb.onFileComplete && cb.onFileComplete(transfer.id, blob, transfer.name);
-          incoming.delete(m.id);
-        }
-      } else if (m.t === "cancel") {
-        incoming.delete(m.id);
-        cb.onTransferCancel && cb.onTransferCancel(m.id);
+      if (m.t === "e2ee-hello") {
+        receiveE2EEHello(m, channel).catch(() => closeForCryptoError());
       }
       return;
     }
-    // Binary chunk -> belongs to the current incoming file.
+    if (isEncryptedEnvelope(data)) {
+      if (!e2eeReady) {
+        if (pendingEncrypted.length >= MAX_PENDING_E2EE) return closeForCryptoError();
+        pendingEncrypted.push(data);
+        return;
+      }
+      decryptEnvelope(data).catch(() => closeForCryptoError());
+    }
+  }
+
+  function handleAppMessage(m) {
+    if (m.t === "msg") {
+      cb.onText && cb.onText(m.text);
+    } else if (m.t === "meta") {
+      const meta = cleanIncomingMeta(m);
+      const transfer = { id: meta.id, name: meta.name, size: meta.size, mime: meta.mime, chunks: [], received: 0 };
+      incoming.set(meta.id, transfer);
+      cb.onFileMeta && cb.onFileMeta(meta);
+    } else if (m.t === "complete") {
+      const transfer = incoming.get(m.id);
+      if (transfer) {
+        const blob = new Blob(transfer.chunks, { type: transfer.mime });
+        cb.onFileComplete && cb.onFileComplete(transfer.id, blob, transfer.name);
+        incoming.delete(m.id);
+      }
+    } else if (m.t === "cancel") {
+      incoming.delete(m.id);
+      cb.onTransferCancel && cb.onTransferCancel(m.id);
+    }
+  }
+
+  function handleAppBinary(data) {
     const active = incoming.values().next().value;
     if (active) {
       active.chunks.push(data);
@@ -111,11 +201,155 @@
     }
   }
 
+  async function startE2EE(ch) {
+    resetE2EE();
+    e2eeKeyPair = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+    const raw = new Uint8Array(await crypto.subtle.exportKey("raw", e2eeKeyPair.publicKey));
+    if (raw.length !== 65 || raw[0] !== 4) throw new Error("bad local key");
+    e2eePublic = b64url(raw);
+    if (channel !== ch || !channelOpen()) return;
+    ch.send(JSON.stringify({ t: "e2ee-hello", v: 1, curve: "P-256", pub: e2eePublic, build: currentBuildFingerprint() }));
+    await deriveE2EEIfReady(ch);
+  }
+
+  async function receiveE2EEHello(msg, ch) {
+    if (msg.v !== 1 || msg.curve !== "P-256") throw new Error("bad e2ee hello");
+    const raw = fromB64url(msg.pub);
+    if (!raw || raw.length !== 65 || raw[0] !== 4) throw new Error("bad remote key");
+    e2eeRemotePublic = msg.pub;
+    e2eeRemoteBuild = cleanBuildFingerprint(msg.build);
+    await deriveE2EEIfReady(ch);
+  }
+
+  async function deriveE2EEIfReady(ch) {
+    if (e2eeReady || !e2eeKeyPair || !e2eePublic || !e2eeRemotePublic || channel !== ch || !channelOpen()) return;
+    const remoteRaw = fromB64url(e2eeRemotePublic);
+    if (!remoteRaw || remoteRaw.length !== 65 || remoteRaw[0] !== 4) throw new Error("bad remote key");
+
+    const remoteKey = await crypto.subtle.importKey("raw", remoteRaw, { name: "ECDH", namedCurve: "P-256" }, false, []);
+    const shared = await crypto.subtle.deriveBits({ name: "ECDH", public: remoteKey }, e2eeKeyPair.privateKey, 256);
+    const hkdfKey = await crypto.subtle.importKey("raw", shared, "HKDF", false, ["deriveBits", "deriveKey"]);
+    const ordered = [e2eePublic, e2eeRemotePublic].sort().join(":");
+    const salt = await sha256Bytes(`wklej-e2ee-salt-v1:${ordered}`);
+    e2eeKey = await crypto.subtle.deriveKey(
+      { name: "HKDF", hash: "SHA-256", salt, info: enc.encode("wklej-e2ee-aes-gcm-v1") },
+      hkdfKey,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"],
+    );
+    const sas = new Uint8Array(
+      await crypto.subtle.deriveBits(
+        { name: "HKDF", hash: "SHA-256", salt, info: enc.encode("wklej-e2ee-sas-v1") },
+        hkdfKey,
+        128,
+      ),
+    );
+    crypto.getRandomValues(e2eeNoncePrefix);
+    e2eeSendSeq = 0;
+    e2eeSasColors = colorsFromBytes(sas);
+    e2eeReady = true;
+    await drainPendingEncrypted();
+    emitSecureReady();
+  }
+
+  function emitSecureReady() {
+    if (e2eeReadyEmitted || !e2eeReady) return;
+    const localBuild = currentBuildFingerprint();
+    if (cb.onBuild && cb.onBuild({ local: localBuild, remote: e2eeRemoteBuild, same: !!localBuild && localBuild === e2eeRemoteBuild }) === false) {
+      closeForCryptoError();
+      return;
+    }
+    e2eeReadyEmitted = true;
+    if (cb.onVerify && e2eeSasColors) cb.onVerify(e2eeSasColors);
+    cb.onOpen && cb.onOpen();
+    emitTransport("open").catch(() => {});
+    setTimeout(() => emitTransport("settled").catch(() => {}), 1200);
+  }
+
+  function isEncryptedEnvelope(data) {
+    const bytes = new Uint8Array(data);
+    return bytes.length >= 15 && bytes[0] === E2EE_MAGIC && (bytes[1] === E2EE_JSON || bytes[1] === E2EE_BINARY);
+  }
+
+  function nextIv() {
+    const iv = new Uint8Array(12);
+    iv.set(e2eeNoncePrefix, 0);
+    const view = new DataView(iv.buffer);
+    view.setUint32(8, e2eeSendSeq++, false);
+    if (e2eeSendSeq > 0xffffffff) throw new Error("e2ee nonce exhausted");
+    return iv;
+  }
+
+  async function encryptAndSend(kind, plaintext) {
+    if (!channelOpen() || !e2eeReady || !e2eeKey) return false;
+    const bytes = plaintext instanceof Uint8Array ? plaintext : new Uint8Array(plaintext);
+    const iv = nextIv();
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, e2eeKey, bytes));
+    const out = new Uint8Array(2 + iv.length + ct.length);
+    out[0] = E2EE_MAGIC;
+    out[1] = kind;
+    out.set(iv, 2);
+    out.set(ct, 14);
+    channel.send(out.buffer);
+    return true;
+  }
+
+  function sendEncryptedJson(msg) {
+    return encryptAndSend(E2EE_JSON, enc.encode(JSON.stringify(msg)));
+  }
+
+  function sendEncryptedBinary(buffer) {
+    return encryptAndSend(E2EE_BINARY, new Uint8Array(buffer));
+  }
+
+  async function decryptEnvelope(data) {
+    if (!e2eeKey) throw new Error("missing e2ee key");
+    const bytes = new Uint8Array(data);
+    const kind = bytes[1];
+    const iv = bytes.slice(2, 14);
+    const ct = bytes.slice(14);
+    const plain = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv }, e2eeKey, ct));
+    if (kind === E2EE_JSON) {
+      const msg = JSON.parse(dec.decode(plain));
+      handleAppMessage(msg);
+    } else if (kind === E2EE_BINARY) {
+      handleAppBinary(plain.buffer);
+    }
+  }
+
+  async function drainPendingEncrypted() {
+    while (pendingEncrypted.length && e2eeReady) {
+      await decryptEnvelope(pendingEncrypted.shift());
+    }
+  }
+
+  function resetE2EE() {
+    e2eeKeyPair = null;
+    e2eePublic = "";
+    e2eeRemotePublic = "";
+    e2eeRemoteBuild = "";
+    e2eeKey = null;
+    e2eeReady = false;
+    e2eeReadyEmitted = false;
+    e2eeNoncePrefix = new Uint8Array(8);
+    e2eeSendSeq = 0;
+    e2eeSasColors = null;
+    pendingEncrypted.length = 0;
+  }
+
+  function closeForCryptoError() {
+    if (channelOpen()) {
+      try { channel.close(); } catch {}
+    }
+    cb.onClose && cb.onClose();
+  }
+
   async function start(initiator, signalFn, callbacks) {
     close();
     sendSignal = signalFn;
     cb = callbacks || {};
-    preferredMode = requestedIceMode();
+    preferredMode = localIceMode();
     activeMode = preferredMode === "auto" ? "direct" : preferredMode;
     initiatorRole = initiator;
     fallbackStarted = false;
@@ -147,7 +381,7 @@
         fallbackStarted = true;
         clearFallbackTimer();
         cb.onFallback && cb.onFallback("remote-offer");
-        await replacePeer("turn");
+        await replacePeer("relay");
       }
       await pc.setRemoteDescription(msg.sdp);
       await flushIce();
@@ -169,6 +403,8 @@
     activeMode = mode;
     next.onicecandidate = (ev) => {
       if (pc !== next) return;
+      // In relay mode the browser is already constrained by
+      // iceTransportPolicy:"relay". Do not parse/filter candidate strings here.
       if (ev.candidate) sendSignal({ type: "ice-candidate", candidate: ev.candidate });
     };
     next.onconnectionstatechange = () => {
@@ -209,7 +445,7 @@
     fallbackStarted = true;
     clearFallbackTimer();
     cb.onFallback && cb.onFallback(reason || "timeout");
-    await replacePeer("turn");
+    await replacePeer("relay");
     if (!pc) return;
     wire(pc.createDataChannel("wklej", { ordered: true }));
     await sendOffer();
@@ -226,6 +462,7 @@
     const oldPc = pc;
     channel = null;
     pc = null;
+    resetE2EE();
     if (oldChannel) {
       oldChannel.onopen = null;
       oldChannel.onclose = null;
@@ -312,49 +549,11 @@
   }
 
   function isOpen() {
-    return channel && channel.readyState === "open";
+    return channelOpen() && e2eeReady;
   }
 
   function sendText(text) {
-    if (isOpen()) channel.send(JSON.stringify({ t: "msg", text }));
-  }
-
-  // Visual safety check: nonces travel only over the already-open RTC channel.
-  function localVerifyNonce() {
-    if (verifyLocalNonce) return verifyLocalNonce;
-    const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
-    verifyLocalNonce = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-    return verifyLocalNonce;
-  }
-
-  function validVerifyNonce(value) {
-    return typeof value === "string" && /^[a-f0-9]{32}$/i.test(value);
-  }
-
-  function sendVerificationNonce() {
-    if (!isOpen() || verifySent) return;
-    verifySent = true;
-    try {
-      channel.send(JSON.stringify({ t: "verify", nonce: localVerifyNonce() }));
-    } catch {}
-  }
-
-  async function emitVerificationPattern() {
-    if (verifyEmitted || !cb.onVerify || !verifyRemoteNonce) return;
-    const local = localVerifyNonce();
-    const pair = [local.toLowerCase(), verifyRemoteNonce.toLowerCase()].sort().join(":");
-    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`wklej-verify-v1:${pair}`));
-    const bytes = new Uint8Array(digest);
-    const colors = [0, 1, 2].map((index) => {
-      const offset = index * 3;
-      const hue = (bytes[offset] + bytes[offset + 1]) % 360;
-      const sat = 72 + (bytes[offset + 2] % 18);
-      const light = 42 + (bytes[offset + 9] % 16);
-      return `${hue} ${sat}% ${light}%`;
-    });
-    verifyEmitted = true;
-    cb.onVerify(colors);
+    if (isOpen()) sendEncryptedJson({ t: "msg", text }).catch(() => closeForCryptoError());
   }
 
   function drain() {
@@ -368,28 +567,28 @@
   // Send one file in chunks with backpressure. Returns a transfer id.
   async function sendFile(file, hooks) {
     hooks = hooks || {};
-    const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random());
+    const id = secureId();
     if (!isOpen()) { hooks.onError && hooks.onError(id, new Error("channel closed")); return id; }
 
     const meta = await buildFileMeta(file);
     hooks.onStart && hooks.onStart(id, meta);
-    channel.send(JSON.stringify({ t: "meta", id, ...meta }));
+    await sendEncryptedJson({ t: "meta", id, ...meta });
     let offset = 0;
     try {
       while (offset < file.size) {
         if (canceled.has(id)) {
-          channel.send(JSON.stringify({ t: "cancel", id }));
+          await sendEncryptedJson({ t: "cancel", id });
           hooks.onCancel && hooks.onCancel(id);
           return id;
         }
         if (channel.bufferedAmount > BUFFER_HIGH) await drain();
         const slice = file.slice(offset, offset + CHUNK_SIZE);
         const buf = await slice.arrayBuffer();
-        channel.send(buf);
+        await sendEncryptedBinary(buf);
         offset += buf.byteLength;
         hooks.onProgress && hooks.onProgress(id, offset, file.size);
       }
-      channel.send(JSON.stringify({ t: "complete", id }));
+      await sendEncryptedJson({ t: "complete", id });
       hooks.onDone && hooks.onDone(id);
     } catch (e) {
       hooks.onError && hooks.onError(id, e);
@@ -468,7 +667,7 @@
 
   function cancelTransfer(id) {
     canceled.add(id);
-    if (isOpen()) { try { channel.send(JSON.stringify({ t: "cancel", id })); } catch {} }
+    if (isOpen()) sendEncryptedJson({ t: "cancel", id }).catch(() => {});
   }
 
   function close() {
@@ -482,10 +681,7 @@
     fallbackStarted = false;
     initiatorRole = false;
     activeMode = "direct";
-    verifyLocalNonce = "";
-    verifyRemoteNonce = "";
-    verifySent = false;
-    verifyEmitted = false;
+    resetE2EE();
   }
 
   window.__T = { start, signal, sendText, sendFile, cancelTransfer, close, isOpen, getTransport: detectTransport };

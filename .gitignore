@@ -5,7 +5,11 @@ dist/
 .env
 .env.*
 *.log
+Archive.zip
+emoji-globe-*.html
+moji-globe-*.html
 IMG_*.png
+IMG_*.PNG
 .DS_Store
 main upgrade/
 next upgrade/

@@ -11,6 +11,7 @@
     "build:public": "node scripts/build-public.mjs",
     "types": "wrangler types",
     "build:atlas": "node scripts/build-atlas.mjs",
+    "verify:client": "npm run build:public && node scripts/client-checksums.mjs",
     "sync:animated": "node scripts/sync-animated-emoji.mjs && npm run build:atlas",
     "refresh:animated-manifest": "node scripts/update-animated-emoji-manifest.mjs"
   },

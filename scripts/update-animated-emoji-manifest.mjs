@@ -13,6 +13,9 @@ const SOURCE = "scripts/animated-emoji.json";
 const WORKER_ATLAS = "worker/atlas.ts";
 const MIN_OPTIONS = 256;
 const SKIN_TONES = new Set(["1f3fb", "1f3fc", "1f3fd", "1f3fe", "1f3ff"]);
+// Keep only one representative from visually similar pairing groups.
+// Globes: keep 🌍. Zodiac/constellation signs: keep ♈.
+const EXCLUDED_CODES = new Set(["1f30e", "1f30f", "2649", "264a", "264b", "264c", "264d", "264e", "264f", "2650", "2651", "2652", "2653", "26ce"]);
 const CATEGORY_ORDER = [
   "Animals and nature",
   "Food and drink",
@@ -53,6 +56,7 @@ function safeEntry(icon) {
   const parts = code.split("_");
   const category = String(icon.categories?.[0] || "Other");
   if (!/^[0-9a-f]+(?:_[0-9a-f]+)*$/.test(code)) return null;
+  if (EXCLUDED_CODES.has(code)) return null;
   if (parts.includes("200d")) return null;
   if (parts.some((part) => SKIN_TONES.has(part))) return null;
   if (category === "Flags" || parts.some(isRegionalIndicator)) return null;

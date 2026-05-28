@@ -44,29 +44,22 @@ async function hmacBytes(pepper: string, msg: string): Promise<Uint8Array> {
   return new Uint8Array(sig);
 }
 
-function mulberry32(a: number): () => number {
-  return () => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+function hex(bytes: Uint8Array): string {
+  return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 async function options(bucket: number, prefix: string, pepper: string): Promise<EmojiDTO[]> {
-  const bytes = await hmacBytes(pepper, `tree:v4:${bucket}:${prefix}`);
-  const seed = ((bytes[0]! << 24) | (bytes[1]! << 16) | (bytes[2]! << 8) | bytes[3]!) >>> 0;
-  const rng = mulberry32(seed);
-  const idx = ATLAS.map((_, i) => i);
-  for (let i = idx.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [idx[i], idx[j]] = [idx[j]!, idx[i]!];
-  }
+  const ranked = await Promise.all(
+    ATLAS.map(async (item) => ({
+      item,
+      score: hex(await hmacBytes(pepper, `tree:v5:${bucket}:${prefix}:${item.id}`)),
+    })),
+  );
+  ranked.sort((a, b) => a.score.localeCompare(b.score));
+
   const out: EmojiDTO[] = [];
   const seen = new Set<string>();
-  for (const i of idx) {
-    const item = ATLAS[i]!;
+  for (const { item } of ranked) {
     const key = visualKey(item.symbol);
     if (seen.has(key)) continue;
     seen.add(key);

@@ -6,6 +6,9 @@
   const $ = (id) => document.getElementById(id);
   const MAX_FILE = 100 * 1024 * 1024;
   const LONG_TEXT_LIMIT = 200;
+  const SESSION_SECONDS = 120;
+  const SESSION_EXTEND_SECONDS = 120;
+  const SESSION_EXTEND_WINDOW_SECONDS = 10;
   const GRACE_PROMPT_SECONDS = 5;
   const GRACE_EXTEND_SECONDS = 10;
 
@@ -13,6 +16,121 @@
   document.querySelectorAll("[data-screen]").forEach((el) => (screens[el.dataset.screen] = el));
   function show(name) {
     for (const k in screens) screens[k].hidden = k !== name;
+  }
+
+  const currentScriptPath = document.currentScript ? new URL(document.currentScript.src).pathname : "";
+  const stylesheetPath = document.querySelector('link[rel="stylesheet"]')?.href
+    ? new URL(document.querySelector('link[rel="stylesheet"]').href).pathname
+    : "";
+  const BUILD_INFO = {
+    fingerprint: document.documentElement.dataset.buildFingerprint || "",
+    hash: document.documentElement.dataset.buildHash || "",
+    signed: document.documentElement.dataset.buildSigned === "true",
+    publicKey: document.documentElement.dataset.buildPublicKey || "",
+    appPath: currentScriptPath,
+    cssPath: stylesheetPath,
+  };
+
+  function setBuildStatus(text, cls) {
+    const line = document.querySelector(".build-line");
+    const stateEl = $("build-state");
+    const fpEl = $("build-fingerprint");
+    if (line) line.className = `build-line ${cls || ""}`.trim();
+    if (stateEl) stateEl.textContent = text;
+    if (fpEl) fpEl.textContent = BUILD_INFO.fingerprint || "----";
+    const badge = $("build-badge");
+    if (badge) badge.textContent = BUILD_INFO.fingerprint ? `build ${BUILD_INFO.fingerprint}` : "build";
+  }
+
+  async function verifyBuildSurface() {
+    setBuildStatus("checking build", "warn");
+    const res = await fetch("/build-manifest.json", { cache: "no-store" });
+    if (!res.ok) throw new Error("missing build manifest");
+    const manifest = await res.json();
+    if (!manifest || manifest.version !== 1 || !manifest.build || !manifest.assets) throw new Error("bad build manifest");
+    if (manifest.build.fingerprint !== BUILD_INFO.fingerprint || manifest.build.sha256 !== BUILD_INFO.hash) {
+      throw new Error("build fingerprint mismatch");
+    }
+    await verifyManifestSignature(manifest);
+    await verifyPublicAsset(manifest, BUILD_INFO.appPath);
+    await verifyPublicAsset(manifest, BUILD_INFO.cssPath);
+    setBuildStatus(manifest.signature && manifest.signature.alg !== "none" ? "signed build" : "build verified", "ok");
+  }
+
+  async function verifyPublicAsset(manifest, path) {
+    const name = String(path || "").replace(/^\//, "");
+    const expected = manifest.assets[name];
+    if (!expected || !expected.sha256) throw new Error(`missing manifest asset: ${name}`);
+    const res = await fetch(path, { cache: "no-cache" });
+    if (!res.ok) throw new Error(`asset unavailable: ${name}`);
+    const actual = await sha256Hex(await res.arrayBuffer());
+    if (actual !== expected.sha256) throw new Error(`asset hash mismatch: ${name}`);
+  }
+
+  async function verifyManifestSignature(manifest) {
+    const sig = manifest.signature;
+    if (!sig || sig.alg === "none") return false;
+    if (!["Ed25519", "ECDSA-P256-SHA256"].includes(sig.alg) || typeof sig.key !== "string" || typeof sig.value !== "string") {
+      throw new Error("bad manifest signature metadata");
+    }
+    if (BUILD_INFO.publicKey && sig.key !== BUILD_INFO.publicKey) throw new Error("manifest signing key mismatch");
+    const keyBytes = b64urlBytes(sig.key);
+    const sigBytes = b64urlBytes(sig.value);
+    const payload = { ...manifest };
+    delete payload.signature;
+    const data = new TextEncoder().encode(stableStringify(payload));
+    const ok =
+      sig.alg === "Ed25519"
+        ? await verifyEd25519Signature(keyBytes, sigBytes, data)
+        : await verifyEcdsaP256Signature(keyBytes, sigBytes, data);
+    if (!ok) throw new Error("manifest signature mismatch");
+    return true;
+  }
+
+  async function verifyEd25519Signature(keyBytes, sigBytes, data) {
+    const key = await crypto.subtle.importKey("spki", keyBytes, { name: "Ed25519" }, false, ["verify"]);
+    return crypto.subtle.verify({ name: "Ed25519" }, key, sigBytes, data);
+  }
+
+  async function verifyEcdsaP256Signature(keyBytes, sigBytes, data) {
+    const key = await crypto.subtle.importKey("spki", keyBytes, { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
+    return crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, key, sigBytes, data);
+  }
+
+  async function sha256Hex(buffer) {
+    const digest = await crypto.subtle.digest("SHA-256", buffer);
+    return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  function b64urlBytes(value) {
+    const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+    const raw = atob(normalized + "=".repeat((4 - (normalized.length % 4)) % 4));
+    const bytes = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    return bytes;
+  }
+
+  function stableStringify(value) {
+    if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+    if (value && typeof value === "object") {
+      return `{${Object.keys(value)
+        .sort()
+        .map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`)
+        .join(",")}}`;
+    }
+    return JSON.stringify(value);
+  }
+
+  function blockUnverifiedBuild() {
+    setBuildStatus("build blocked", "bad");
+    document.querySelectorAll(".pair-action").forEach((btn) => {
+      btn.disabled = true;
+    });
+    const grid = $("emoji-grid");
+    if (grid) {
+      grid.textContent = "build verification failed";
+      grid.classList.add("grid-loading");
+    }
   }
 
   function setLoading(text, quiet) {
@@ -40,6 +158,7 @@
     theme: null,
     nearbySend: false,
     pendingPayload: null,
+    shortcutCallback: "",
     attachmentNavSafe: false,
   };
 
@@ -49,6 +168,16 @@
   let graceExtendInterval = 0;
   let graceExtendTimeout = 0;
   let graceExtensionUsed = false;
+  let sessionCountdownTimer = 0;
+  let sessionExtendUsed = false;
+  let lastTransportKind = "";
+  let shortcutHandoffToken = "";
+  const SHORTCUT_PAYLOAD_CHANNEL = "wklej-shortcut-payload-v1";
+  const SHORTCUT_PAYLOAD_STORAGE = "wklej-shortcut-payload-v1";
+  const seenShortcutPayloads = new Set();
+  let shortcutPayloadChannel = null;
+  let shortcutPayloadPollTimer = 0;
+  let shortcutServiceWorkerReady = Promise.resolve(false);
 
   function clearTimers() {
     state.timers.forEach((t) => {
@@ -56,6 +185,7 @@
       clearTimeout(t);
     });
     state.timers = [];
+    clearSessionCountdown();
   }
 
   function countdown(elId, secs, onEnd) {
@@ -72,6 +202,68 @@
       }
     }, 1000);
     state.timers.push(t);
+  }
+
+  function clearSessionCountdown() {
+    clearInterval(sessionCountdownTimer);
+    sessionCountdownTimer = 0;
+    hideSessionExtend();
+  }
+
+  function hideSessionExtend() {
+    const btn = $("session-extend");
+    if (!btn) return;
+    btn.hidden = true;
+    btn.disabled = false;
+  }
+
+  function setSessionTime(left) {
+    const cd = $("cd-conn");
+    if (cd) cd.textContent = String(Math.max(0, left));
+  }
+
+  function startConnectedCountdown(seconds) {
+    clearSessionCountdown();
+    let left = Math.max(0, Math.ceil(seconds));
+    setSessionTime(left);
+    updateSessionExtendButton(left);
+    sessionCountdownTimer = setInterval(() => {
+      left -= 1;
+      setSessionTime(left);
+      updateSessionExtendButton(left);
+      if (left <= 0) {
+        clearSessionCountdown();
+        hardReset("expired", true);
+      }
+    }, 1000);
+  }
+
+  function updateSessionExtendButton(left) {
+    const btn = $("session-extend");
+    if (!btn) return;
+    const canExtend = state.connected && !state.ending && !sessionExtendUsed && left > 0 && left <= SESSION_EXTEND_WINDOW_SECONDS;
+    btn.hidden = !canExtend;
+    btn.disabled = false;
+  }
+
+  function requestSessionExtend() {
+    const btn = $("session-extend");
+    if (!state.connected || state.ending || sessionExtendUsed) return;
+    sessionExtendUsed = true;
+    if (btn) {
+      btn.hidden = true;
+      btn.disabled = true;
+    }
+    clearInterval(sessionCountdownTimer);
+    sessionCountdownTimer = 0;
+    setSessionTime(SESSION_EXTEND_SECONDS);
+    wsSend({ type: "extend-session" });
+  }
+
+  function applySessionExtended(expiresAt) {
+    const ms = typeof expiresAt === "number" ? expiresAt - Date.now() : SESSION_EXTEND_SECONDS * 1000;
+    sessionExtendUsed = true;
+    startConnectedCountdown(Math.max(1, Math.ceil(ms / 1000)));
   }
 
   function fmtBytes(n) {
@@ -163,11 +355,17 @@
     state.theme = null;
     state.nearbySend = false;
     state.pendingPayload = null;
+    state.shortcutCallback = "";
+    clearShortcutHandoff();
     pendingReset = null;
     graceExtensionUsed = false;
+    sessionExtendUsed = false;
+    lastTransportKind = "";
     clearGracePrompt();
     clearSessionTheme();
     clearSafetyDots();
+    clearPeerBuildBadge();
+    clearOverflowBadge();
     clearTimers();
     show("pairing");
     countdown("cd-pair", 120, () => hardReset("expired", false));
@@ -176,6 +374,8 @@
       state.label = label;
       state.nearbySend = !!(meta && meta.nearbySend);
       state.pendingPayload = normalizePendingPayload(meta && meta.payload);
+      state.shortcutCallback = shortcutCallbackToken(meta && meta.shortcutCallback);
+      if (meta && meta.shortcutHandoff) acceptShortcutHandoff(meta.shortcutHandoff, meta.shortcutHandoffUrl);
       $("your-pick").textContent = label;
       setLoading("creating");
       show("loading");
@@ -205,6 +405,14 @@
     let d;
     try {
       d = await createSession(selection);
+      if (d && !d.ok && d.reason === "no-room" && selection && selection.named && selection.intent === "join") {
+        d = await waitForNamedRoom(selection);
+      }
+      if (d && !d.ok && d.reason === "name-active" && selection && selection.named && selection.intent === "create") {
+        const joinSelection = { ...selection, intent: "join" };
+        state.selection = joinSelection;
+        d = await createSession(joinSelection);
+      }
     } catch {
       hardReset("network error", false);
       return;
@@ -222,6 +430,21 @@
     }
     if (d.available) createAsSeed();
     else joinAsPeer();
+  }
+
+  async function waitForNamedRoom(selection) {
+    setLoading("waiting");
+    let last = { ok: false, reason: "no-room" };
+    for (let i = 0; i < 6; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      try {
+        const d = await createSession(selection);
+        last = d || last;
+        if (d && d.ok && d.token) return d;
+        if (d && d.reason === "rate-limited") return d;
+      } catch {}
+    }
+    return last;
   }
 
   async function waitForInvitedSeed(selection) {
@@ -370,6 +593,19 @@
       case "session-expired":
         hardReset("ended", false);
         break;
+      case "session-extended":
+        applySessionExtended(msg.expiresAt);
+        break;
+      case "session-extend-denied":
+        sessionExtendUsed = true;
+        hideSessionExtend();
+        if (msg.reason !== "extension-used") hardReset("expired", true);
+        break;
+      case "peer-overflow":
+        showOverflowBadge(msg.reason || "peer-overflow");
+        setHealth("bad", "error");
+        setTransport("bad");
+        break;
     }
   }
 
@@ -382,6 +618,7 @@
         setHealth("repair", "naprawiam p2p");
         setTransport("repair", true);
       },
+      onBuild: applyPeerBuild,
       onTransport: onTransport,
       onVerify: applySafetyDots,
       onClose: () => {
@@ -419,10 +656,13 @@
     applySessionTheme();
     show("connected");
     clearTimers();
+    sessionExtendUsed = false;
+    clearOverflowBadge();
     setHealth("ok", "connected");
     setTransport("pending");
     requestAnimationFrame(autosize);
-    countdown("cd-conn", 120, () => hardReset("expired", true));
+    startConnectedCountdown(SESSION_SECONDS);
+    markShortcutReady();
     flushPendingPayload();
   }
 
@@ -436,6 +676,7 @@
     const el = $("transport");
     if (!el) return;
     const kind = typeof info === "string" ? info : info && info.transport;
+    lastTransportKind = kind || "";
     const cls = kind === "direct" ? "direct" : kind === "turn" || kind === "relay" ? "relay" : kind === "repair" ? "repair" : kind === "bad" ? "bad" : "pending";
     el.className = "badge transport " + cls;
     if (cls === "pending") el.textContent = "…";
@@ -447,6 +688,47 @@
   function onTransport(info) {
     if (!info || (info.transport !== "direct" && info.transport !== "turn" && info.transport !== "relay")) return;
     setTransport(info, false);
+  }
+
+  function applyPeerBuild(info) {
+    const el = $("peer-build-badge");
+    if (!el) return true;
+    el.hidden = false;
+    if (info && info.same) {
+      el.className = "badge build-peer ok";
+      el.textContent = "✓";
+      el.setAttribute("aria-label", "same build");
+      return true;
+    }
+    el.className = "badge build-peer bad";
+    el.textContent = "×";
+    el.setAttribute("aria-label", "build mismatch");
+    setHealth("bad", "error");
+    setTimeout(() => hardReset("build mismatch", true, { immediate: true }), 0);
+    return false;
+  }
+
+  function clearPeerBuildBadge() {
+    const el = $("peer-build-badge");
+    if (!el) return;
+    el.hidden = true;
+    el.className = "badge build-peer";
+    el.textContent = "✓";
+    el.setAttribute("aria-label", "same build");
+  }
+
+  function clearOverflowBadge() {
+    const el = $("overflow-badge");
+    if (!el) return;
+    el.hidden = true;
+    el.textContent = "";
+  }
+
+  function showOverflowBadge(reason) {
+    const el = $("overflow-badge");
+    if (!el) return;
+    el.hidden = false;
+    el.textContent = reason === "peer-overflow" ? "third peer blocked" : "session locked";
   }
 
   // ---------- editor ----------
@@ -599,6 +881,288 @@
       return { kind: "text", text: payload.text };
     }
     return null;
+  }
+
+  function acceptShortcutHandoff(token, handoffUrl) {
+    const value = String(token || "").trim();
+    if (!/^[A-Za-z0-9_-]{24,96}$/.test(value)) return;
+    shortcutHandoffToken = value;
+    window.addEventListener("message", onShortcutHandoffMessage);
+    const url = shortcutLocalHandoffUrl(handoffUrl, value);
+    if (url) fetchShortcutHandoff(url, value);
+  }
+
+  function clearShortcutHandoff() {
+    shortcutHandoffToken = "";
+    window.removeEventListener("message", onShortcutHandoffMessage);
+  }
+
+  function onShortcutHandoffMessage(ev) {
+    const data = ev && ev.data;
+    if (!shortcutHandoffToken || !data || data.type !== "wklej-shortcut-file" || data.token !== shortcutHandoffToken) return;
+    processShortcutHandoff(data);
+  }
+
+  async function fetchShortcutHandoff(url, token) {
+    try {
+      const res = await fetch(url, { cache: "no-store", mode: "cors" });
+      if (!res.ok || token !== shortcutHandoffToken) return;
+      processShortcutHandoff(await res.json());
+    } catch {}
+  }
+
+  function shortcutLocalHandoffUrl(value, token) {
+    try {
+      const url = new URL(String(value || ""));
+      const port = Number(url.port);
+      if (url.protocol !== "http:" || url.hostname !== "127.0.0.1" || !Number.isInteger(port) || port < 1024 || port > 65535) return "";
+      if (!url.pathname.includes(token)) return "";
+      return url.href;
+    } catch {
+      return "";
+    }
+  }
+
+  function processShortcutHandoff(data) {
+    if (!shortcutHandoffToken || !data || data.type !== "wklej-shortcut-file" || data.token !== shortcutHandoffToken) return;
+    const payload = shortcutHandoffPayload(data);
+    clearShortcutHandoff();
+    if (!payload) return;
+    state.pendingPayload = payload;
+    if (state.connected && !state.ending) flushPendingPayload();
+  }
+
+  function shortcutHandoffPayload(data) {
+    if (typeof data.text === "string" && data.text.trim()) {
+      return normalizePendingPayload({ kind: "text", text: data.text });
+    }
+    if (typeof data.file === "string") {
+      const bytes = shortcutBase64ToBytes(data.file);
+      if (!bytes || bytes.byteLength > MAX_FILE) return null;
+      const name = shortcutFileName(data.filename, data.mime);
+      const mime = shortcutMime(data.mime);
+      return normalizePendingPayload({ kind: "file", file: new File([bytes], name, { type: mime }) });
+    }
+    return null;
+  }
+
+  function shortcutBase64ToBytes(value) {
+    try {
+      const normalized = String(value || "").replace(/\s+/g, "").replace(/-/g, "+").replace(/_/g, "/");
+      const raw = atob(normalized + "=".repeat((4 - (normalized.length % 4)) % 4));
+      const bytes = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+      return bytes;
+    } catch {
+      return null;
+    }
+  }
+
+  function shortcutMime(value) {
+    const mime = String(value || "").trim().toLowerCase();
+    return /^[a-z0-9][a-z0-9.+-]*\/[a-z0-9][a-z0-9.+-]*$/i.test(mime) ? mime : "application/octet-stream";
+  }
+
+  function shortcutFileName(value, mime) {
+    const clean = String(value || "")
+      .normalize("NFKC")
+      .replace(/[\\/\0\r\n]+/g, " ")
+      .trim()
+      .slice(0, 96);
+    if (clean) return clean;
+    const ext = mime === "text/plain" ? "txt" : mime === "image/jpeg" ? "jpg" : mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "bin";
+    return `wklej-shortcut.${ext}`;
+  }
+
+  function onShortcutPayloadEvent(ev) {
+    const payload = normalizePendingPayload(ev && ev.detail && ev.detail.payload);
+    if (!payload) return;
+    if (!shortcutTargetMatches(ev && ev.detail)) return;
+    const id = ev && ev.detail && typeof ev.detail.id === "string" ? ev.detail.id : "";
+    if (id) rememberShortcutPayload(id);
+    acceptShortcutPayload(payload, false);
+  }
+
+  function acceptShortcutPayload(payload, requireConnected) {
+    if (requireConnected && (!state.connected || state.ending)) return false;
+    state.pendingPayload = payload;
+    if (state.connected && !state.ending) flushPendingPayload();
+    return true;
+  }
+
+  function installShortcutPayloadBridge() {
+    shortcutServiceWorkerReady = ensureShortcutServiceWorker();
+    if ("BroadcastChannel" in window) {
+      try {
+        shortcutPayloadChannel = new BroadcastChannel(SHORTCUT_PAYLOAD_CHANNEL);
+        shortcutPayloadChannel.onmessage = (ev) => handleShortcutPayloadEnvelope(ev.data, false);
+      } catch {
+        shortcutPayloadChannel = null;
+      }
+    }
+    window.addEventListener("storage", (ev) => {
+      if (ev.key === SHORTCUT_PAYLOAD_STORAGE && ev.newValue) handleShortcutPayloadEnvelope(ev.newValue, true);
+    });
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", (ev) => {
+        const accepted = handleShortcutPayloadEnvelope(ev.data, false);
+        if (accepted && ev.ports && ev.ports[0]) {
+          try {
+            ev.ports[0].postMessage({ ok: true, id: ev.data && ev.data.id });
+          } catch {}
+        }
+      });
+    }
+    shortcutPayloadPollTimer = window.setInterval(readShortcutPayloadStorage, 900);
+  }
+
+  async function ensureShortcutServiceWorker() {
+    if (!("serviceWorker" in navigator)) return false;
+    try {
+      const registration = await navigator.serviceWorker.register("/shortcut-sw.js", { scope: "/" });
+      try {
+        await registration.update();
+      } catch {}
+      const nextWorker = registration.installing || registration.waiting;
+      if (nextWorker && nextWorker.state !== "activated") {
+        await new Promise((resolve) => {
+          const timer = setTimeout(resolve, 4000);
+          const done = () => {
+            clearTimeout(timer);
+            resolve();
+          };
+          nextWorker.addEventListener("statechange", () => {
+            if (nextWorker.state === "activated" || nextWorker.state === "redundant") done();
+          });
+          navigator.serviceWorker.addEventListener("controllerchange", done, { once: true });
+        });
+      }
+      await navigator.serviceWorker.ready;
+      if (navigator.serviceWorker.controller) return true;
+      return await new Promise((resolve) => {
+        const timer = setTimeout(() => resolve(!!navigator.serviceWorker.controller), 2000);
+        navigator.serviceWorker.addEventListener(
+          "controllerchange",
+          () => {
+            clearTimeout(timer);
+            resolve(true);
+          },
+          { once: true },
+        );
+      });
+    } catch {
+      return false;
+    }
+  }
+
+  function readShortcutPayloadStorage() {
+    if (!state.connected || state.ending) return;
+    let raw = "";
+    try {
+      raw = localStorage.getItem(SHORTCUT_PAYLOAD_STORAGE) || "";
+    } catch {
+      return;
+    }
+    if (raw) handleShortcutPayloadEnvelope(raw, true);
+  }
+
+  function handleShortcutPayloadEnvelope(raw, fromStorage) {
+    if (!state.connected || state.ending) return false;
+    let data = raw;
+    if (typeof raw === "string") {
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        return false;
+      }
+    }
+    if (!data || data.type !== "wklej-shortcut-payload") return false;
+    if (!shortcutTargetMatches(data)) return false;
+    const id = typeof data.id === "string" ? data.id : "";
+    if (!id || seenShortcutPayloads.has(id)) return false;
+    if (!Number.isFinite(data.expiresAt) || data.expiresAt <= Date.now()) {
+      if (fromStorage) clearStoredShortcutPayload(id);
+      return false;
+    }
+    const payload = shortcutPayloadFromEnvelope(data.payload);
+    if (!payload) return false;
+    rememberShortcutPayload(id);
+    if (fromStorage) clearStoredShortcutPayload(id);
+    const accepted = acceptShortcutPayload(payload, true);
+    return accepted;
+  }
+
+  function shortcutPayloadFromEnvelope(payload) {
+    if (!payload || typeof payload !== "object") return null;
+    if (payload.kind === "text" && typeof payload.text === "string") {
+      return normalizePendingPayload({ kind: "text", text: payload.text });
+    }
+    if (payload.kind !== "file") return null;
+    if (payload.file instanceof File) {
+      return normalizePendingPayload({ kind: "file", file: payload.file });
+    }
+    const name = shortcutFileName(payload.name || payload.filename, payload.mime);
+    const mime = shortcutMime(payload.mime);
+    if (typeof payload.file === "string") {
+      const bytes = shortcutBase64ToBytes(payload.file);
+      if (!bytes || bytes.byteLength > MAX_FILE) return null;
+      return normalizePendingPayload({ kind: "file", file: new File([bytes], name, { type: mime }) });
+    }
+    if (payload.buffer instanceof ArrayBuffer) {
+      if (payload.buffer.byteLength > MAX_FILE) return null;
+      return normalizePendingPayload({ kind: "file", file: new File([payload.buffer], name, { type: mime }) });
+    }
+    return null;
+  }
+
+  function shortcutTargetMatches(data) {
+    if (!data || typeof data !== "object") return true;
+    const targetRole = String(data.targetRole || "").trim().toLowerCase();
+    if ((targetRole === "seed" || targetRole === "peer") && state.role !== targetRole) return false;
+    const room = String(data.room || "")
+      .normalize("NFKC")
+      .trim()
+      .toLowerCase();
+    if (!room) return true;
+    const current = state.selection && state.selection.named ? String(state.selection.name || "").trim().toLowerCase() : "";
+    return current === room;
+  }
+
+  function rememberShortcutPayload(id) {
+    seenShortcutPayloads.add(id);
+    if (seenShortcutPayloads.size <= 64) return;
+    const first = seenShortcutPayloads.values().next().value;
+    if (first) seenShortcutPayloads.delete(first);
+  }
+
+  function clearStoredShortcutPayload(id) {
+    try {
+      const raw = localStorage.getItem(SHORTCUT_PAYLOAD_STORAGE);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (!id || data.id === id) localStorage.removeItem(SHORTCUT_PAYLOAD_STORAGE);
+    } catch {}
+  }
+
+  function shortcutCallbackToken(value) {
+    const clean = String(value || "")
+      .normalize("NFKC")
+      .trim()
+      .slice(0, 96);
+    return /^[A-Za-z0-9._ -]{4,96}$/.test(clean) && new Set(clean.replace(/[^A-Za-z0-9]/g, "").toLowerCase()).size >= 2 ? clean : "";
+  }
+
+  async function markShortcutReady() {
+    const callback = shortcutCallbackToken(state.shortcutCallback);
+    if (!callback) return;
+    if (!(await shortcutServiceWorkerReady)) return;
+    state.shortcutCallback = "";
+    fetch("/api/shortcut-ready", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ callback }),
+      keepalive: true,
+    }).catch(() => {});
   }
 
   function flushPendingPayload() {
@@ -1174,6 +1738,9 @@
     clearAttachmentNavigationProtection();
     clearSessionTheme();
     clearSafetyDots();
+    clearPeerBuildBadge();
+    clearOverflowBadge();
+    lastTransportKind = "";
     window.__P.reset();
   }
 
@@ -1188,6 +1755,7 @@
     state.pendingPayload = null;
     state.attachmentNavSafe = false;
     pendingReset = null;
+    sessionExtendUsed = false;
   }
 
   function closeTransports() {
@@ -1280,8 +1848,10 @@
   const infoBtn = $("page-info");
   const infoModal = $("info-modal");
   const infoClose = $("info-close");
+  const sessionExtend = $("session-extend");
   if (infoBtn) infoBtn.addEventListener("click", showInfoModal);
   if (infoClose) infoClose.addEventListener("click", hideInfoModal);
+  if (sessionExtend) sessionExtend.addEventListener("click", requestSessionExtend);
   if (infoModal) {
     infoModal.addEventListener("click", (ev) => {
       if (ev.target === infoModal) hideInfoModal();
@@ -1294,6 +1864,8 @@
   $("grace-extend").addEventListener("click", extendGraceShutdown);
   $("grace-end").addEventListener("click", finalizePendingReset);
 
+  window.addEventListener("wklej-shortcut-payload", onShortcutPayloadEvent);
+  installShortcutPayloadBridge();
   autosize();
-  beginPairing();
+  verifyBuildSurface().then(beginPairing).catch(blockUnverifiedBuild);
 })();

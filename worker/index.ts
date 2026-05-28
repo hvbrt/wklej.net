@@ -5,6 +5,9 @@
 //   POST /api/session { m1, path } -> room availability + opaque room token
 //   GET  /api/name-check?name=... -> custom-name active probe, no token
 //   POST /api/name-session { name,intent } -> custom-name room token
+//   POST /api/shortcut-ready { callback } -> ephemeral "browser paired" status
+//   GET  /api/shortcut-status?callback=... -> ephemeral status for iOS Shortcut polling
+//   GET  /api/shortcut-wait?callback=... -> short long-poll for iOS Shortcut
 //   POST /api/end { token,endKey } -> participant-authenticated teardown
 //   GET  /ws?token=...&role=...   -> WebSocket signaling upgrade
 //   *                              -> static assets from ./public
@@ -12,7 +15,22 @@
 // The Worker is signaling-only. Text and files travel over WebRTC DataChannel.
 // Room keys stay server-side and enter the Durable Object only via X-Room-Key.
 
-import { allowCreate, allowJoin, allowNamedCheck, allowNamedSession, updateNearbyPresence, type NearbyRequest } from "./rate-limit";
+import {
+  allowCreate,
+  allowEnd,
+  allowIce,
+  allowJoin,
+  allowNamedCheck,
+  allowNamedSession,
+  allowPairSession,
+  allowShortcutReady,
+  allowShortcutStatus,
+  allowTree,
+  getShortcutStatus,
+  markShortcutReady,
+  updateNearbyPresence,
+  type NearbyRequest,
+} from "./rate-limit";
 import { DurableRoom } from "./durable-room";
 import { RateLimit } from "./rate-limit-do";
 import { handleNamedCheck, handleNamedSession, handlePairSession, handleTree, openRoomKey, type PairingDeps } from "./pairing-session";
@@ -38,13 +56,22 @@ export default {
     }
 
     if (url.pathname === "/api/ice") {
+      if (!(await allowIce(env.RATELIMIT, ip))) {
+        return json(req, { ok: false, reason: "rate-limited" }, { status: 429 });
+      }
       const requestedMode = parseIceMode(url.searchParams.get("mode"));
       const iceServers = await mintIceServers(env, requestedMode);
       const hasTurn = hasTurnServer(iceServers);
+      if (requestedMode === "relay" && !hasTurn) {
+        return json(req, { iceServers: [], hasTurn: false, mode: "relay", reason: "turn-unavailable" }, { status: 503 });
+      }
       return json(req, { iceServers, hasTurn, mode: hasTurn ? requestedMode : "direct" });
     }
 
     if (url.pathname === "/api/tree" && req.method === "GET") {
+      if (!(await allowTree(env.RATELIMIT, ip))) {
+        return json(req, { ok: false, reason: "rate-limited" }, { status: 429 });
+      }
       return withSecurityHeaders(req, await handleTree(url, pairingDeps(env)));
     }
 
@@ -64,8 +91,20 @@ export default {
       return handleNameCheck(req, url, env, ip);
     }
 
+    if (url.pathname === "/api/shortcut-ready" && req.method === "POST") {
+      return handleShortcutReady(req, env, ip);
+    }
+
+    if (url.pathname === "/api/shortcut-status" && req.method === "GET") {
+      return handleShortcutStatus(req, url, env, ip);
+    }
+
+    if (url.pathname === "/api/shortcut-wait" && req.method === "GET") {
+      return handleShortcutWait(req, url, env, ip);
+    }
+
     if (url.pathname === "/api/end" && req.method === "POST") {
-      return handleEnd(req, env);
+      return handleEnd(req, env, ip);
     }
 
     if (url.pathname === "/ws") {
@@ -89,7 +128,7 @@ function pairingDeps(env: Env): PairingDeps {
 }
 
 async function handleSession(req: Request, env: Env, ip: string): Promise<Response> {
-  if (!(await allowJoin(env.RATELIMIT, ip))) {
+  if (!(await allowPairSession(env.RATELIMIT, ip))) {
     return json(req, { ok: false, reason: "rate-limited" }, { status: 429 });
   }
   return withSecurityHeaders(req, await handlePairSession(req, pairingDeps(env)));
@@ -107,6 +146,69 @@ async function handleNameCheck(req: Request, url: URL, env: Env, ip: string): Pr
     return json(req, { ok: false, reason: "rate-limited" }, { status: 429 });
   }
   return withSecurityHeaders(req, await handleNamedCheck(url, pairingDeps(env)));
+}
+
+async function handleShortcutReady(req: Request, env: Env, ip: string): Promise<Response> {
+  if (!(await allowShortcutReady(env.RATELIMIT, ip))) {
+    return json(req, { ok: false, reason: "rate-limited" }, { status: 429 });
+  }
+  const callback = await readShortcutCallback(req);
+  if (!callback) return json(req, { ok: false, reason: "bad-callback" }, { status: 400 });
+  const status = await markShortcutReady(env.RATELIMIT, callback);
+  return json(req, { ok: true, ...status });
+}
+
+async function handleShortcutStatus(req: Request, url: URL, env: Env, ip: string): Promise<Response> {
+  if (!(await allowShortcutStatus(env.RATELIMIT, ip))) {
+    return json(req, { ok: false, reason: "rate-limited" }, { status: 429 });
+  }
+  const callback = cleanShortcutCallback(url.searchParams.get("callback") || "");
+  const asText = url.searchParams.get("format") === "text";
+  if (!callback) {
+    if (asText) return text(req, "bad-callback", { status: 400 });
+    return json(req, { ok: false, reason: "bad-callback", ready: false, ttl: 0 }, { status: 400 });
+  }
+  const status = await getShortcutStatus(env.RATELIMIT, callback);
+  if (asText) return text(req, status.ready ? "ready" : "wait");
+  return json(req, { ok: true, ...status });
+}
+
+async function handleShortcutWait(req: Request, url: URL, env: Env, ip: string): Promise<Response> {
+  if (!(await allowShortcutStatus(env.RATELIMIT, ip))) {
+    return text(req, "rate-limited", { status: 429 });
+  }
+  const callback = cleanShortcutCallback(url.searchParams.get("callback") || "");
+  if (!callback) return text(req, "bad-callback", { status: 400 });
+
+  const timeoutMs = Math.min(Math.max(Number(url.searchParams.get("timeout") || 90), 1), 110) * 1000;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const status = await getShortcutStatus(env.RATELIMIT, callback);
+    if (status.ready) return text(req, "ready");
+    await sleep(900);
+  }
+  return text(req, "not-ready", { status: 408 });
+}
+
+async function readShortcutCallback(req: Request): Promise<string> {
+  try {
+    const body = await req.json<{ callback?: unknown }>();
+    return cleanShortcutCallback(typeof body.callback === "string" ? body.callback : "");
+  } catch {
+    return "";
+  }
+}
+
+function cleanShortcutCallback(value: string): string {
+  const clean = value
+    .normalize("NFKC")
+    .trim()
+    .slice(0, 96);
+  return /^[A-Za-z0-9._ -]{4,96}$/.test(clean) && new Set(clean.replace(/[^A-Za-z0-9]/g, "").toLowerCase()).size >= 2 ? clean : "";
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function handleNearby(req: Request, env: Env, ip: string): Promise<Response> {
@@ -178,7 +280,10 @@ function privacyHint(req: Request): { privateRelayLikely: boolean; asOrganizatio
   return { privateRelayLikely, asOrganization: privateRelayLikely ? asOrganization : "" };
 }
 
-async function handleEnd(req: Request, env: Env): Promise<Response> {
+async function handleEnd(req: Request, env: Env, ip: string): Promise<Response> {
+  if (!(await allowEnd(env.RATELIMIT, ip))) {
+    return text(req, "rate limited", { status: 429 });
+  }
   const { token, endKey } = await readEndRequest(req);
   if (!token || !endKey) return text(req, "bad request", { status: 400 });
 
@@ -292,10 +397,10 @@ function withSecurityHeadersInit(req: Request, init: ResponseInit): ResponseInit
       "style-src 'self'",
       "font-src 'self'",
       "img-src 'self' data: blob:",
-      "connect-src 'self' wss: https://rtc.live.cloudflare.com stun: turn: turns:",
+      "connect-src 'self' http://127.0.0.1:* wss: https://rtc.live.cloudflare.com stun: turn: turns:",
       "media-src 'none'",
       "object-src 'none'",
-      "worker-src 'none'",
+      "worker-src 'self'",
     ].join("; "),
   );
 
@@ -305,10 +410,12 @@ function withSecurityHeadersInit(req: Request, init: ResponseInit): ResponseInit
 
   if (url.pathname.startsWith("/api/")) {
     headers.set("Cache-Control", "no-store");
+  } else if (url.pathname === "/build-manifest.json" || url.pathname === "/shortcut-sw.js") {
+    headers.set("Cache-Control", "no-cache");
   } else if (
     (init.status ?? 200) >= 200 &&
     (init.status ?? 200) < 300 &&
-    (/^\/[0-9a-f]{10}\.(?:js|css|webp)$/.test(url.pathname) || /^\/emoji\/[0-9a-f_]+\.webp$/.test(url.pathname))
+    (/^\/[0-9a-f]{10}\.(?:js|css|webp|woff2)$/.test(url.pathname) || /^\/emoji\/[0-9a-f_]+\.webp$/.test(url.pathname))
   ) {
     headers.set("Cache-Control", "public, max-age=31536000, immutable");
   } else if (url.pathname === "/" || url.pathname === "/index.html") {

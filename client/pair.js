@@ -28,6 +28,11 @@
   const NAME_CHECK_DELAY_MS = 360;
   const BUCKET_MS = 60000;
   const ASSET_PRELOAD_BUDGET_MS = 220;
+  const SHORTCUT_TEXT_LIMIT = 8000;
+  const SHORTCUT_FILE_LIMIT = 6 * 1024 * 1024;
+  const SHORTCUT_PAYLOAD_CHANNEL = "wklej-shortcut-payload-v1";
+  const SHORTCUT_PAYLOAD_STORAGE = "wklej-shortcut-payload-v1";
+  const SHORTCUT_PAYLOAD_TTL_MS = 60_000;
 
   let first = null;
   let ids = [];
@@ -49,12 +54,21 @@
   let activeGuide = null;
   let activeInviteId = "";
   let nameIntent = "create";
+  let nameReady = false;
   let nameCheckTimer = 0;
   let nameCheckSeq = 0;
   let firstLevelCache = null;
   let nearbyDeviceRows = new Map();
+  let shortcutWatchInstalled = false;
   const seenInvites = new Set();
   const nearbyDrafts = new Map();
+
+  function secureId() {
+    if (crypto.randomUUID) return crypto.randomUUID();
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  }
 
   function shuffle(arr) {
     const out = arr.slice();
@@ -175,19 +189,37 @@
   }
 
   const FIELD_SLOTS = [
-    { x: 13, y: 25 },
-    { x: 33, y: 20 },
-    { x: 53, y: 26 },
-    { x: 75, y: 21 },
-    { x: 22, y: 47 },
-    { x: 43, y: 43 },
-    { x: 64, y: 49 },
-    { x: 84, y: 45 },
-    { x: 15, y: 70 },
-    { x: 37, y: 68 },
-    { x: 60, y: 72 },
-    { x: 79, y: 68 },
+    { x: 12, y: 31 },
+    { x: 27, y: 18 },
+    { x: 48, y: 25 },
+    { x: 76, y: 16 },
+    { x: 88, y: 38 },
+    { x: 19, y: 53 },
+    { x: 41, y: 45 },
+    { x: 67, y: 54 },
+    { x: 10, y: 78 },
+    { x: 34, y: 72 },
+    { x: 58, y: 82 },
+    { x: 82, y: 69 },
   ];
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function fieldSlots(count) {
+    const slots = shuffle(FIELD_SLOTS).slice(0, count);
+    const jitter = new Uint32Array(slots.length * 2);
+    crypto.getRandomValues(jitter);
+    return slots.map((slot, index) => {
+      const xShift = (jitter[index * 2] % 900) / 100 - 4.5;
+      const yShift = (jitter[index * 2 + 1] % 900) / 100 - 4.5;
+      return {
+        x: clamp(slot.x + xShift, 8, 92),
+        y: clamp(slot.y + yShift, 13, 86),
+      };
+    });
+  }
 
   function renderEmojiGlobe(items, level, moveMode) {
     clearGrid();
@@ -246,10 +278,11 @@
     let switchTimer = 0;
     let pointer = null;
     let suppressClickUntil = 0;
+    const slots = fieldSlots(sourceItems.length);
 
     sourceItems.forEach((item, index) => {
       const key = index + 1;
-      const slot = FIELD_SLOTS[index % FIELD_SLOTS.length];
+      const slot = slots[index % slots.length];
       const button = document.createElement("button");
       button.type = "button";
       button.className = "emoji-map-pick";
@@ -409,11 +442,11 @@
     try {
       nearbyId = sessionStorage.getItem("wklej-nearby-id") || "";
       if (!nearbyId) {
-        nearbyId = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random());
+        nearbyId = secureId();
         sessionStorage.setItem("wklej-nearby-id", nearbyId);
       }
     } catch {
-      nearbyId = String(Date.now() + Math.random());
+      nearbyId = secureId();
     }
     return nearbyId;
   }
@@ -512,7 +545,7 @@
     } else if (manualFallback) {
       nearbyText.textContent = "manual ready";
     } else {
-      nearbyText.textContent = count > 0 ? `${count} ${deviceWord(count)} found ready to connect` : "nearby";
+      nearbyText.textContent = count > 0 ? "nearby devices" : "nearby";
     }
 
     renderNearbyDevices(devices);
@@ -763,17 +796,23 @@
     if (nameStatus) nameStatus.textContent = status || (nameIntent === "join" ? "room found" : "ready to create");
   }
 
+  function setNameRoomReady(ready) {
+    nameReady = !!ready;
+    if (!nameCreate) return;
+    nameCreate.hidden = !nameReady;
+    nameCreate.disabled = !nameReady;
+  }
+
   function updateNameRoomState(immediate) {
     if (!nameInput) return;
     const normalized = normalizeRoomName(nameInput.value);
     clearTimeout(nameCheckTimer);
     nameCheckSeq++;
+    setNameRoomReady(false);
     if (!isValidRoomName(normalized)) {
       setNameRoomIntent("create", "4-40 chars, avoid obvious names");
-      if (nameCreate) nameCreate.disabled = true;
       return;
     }
-    if (nameCreate) nameCreate.disabled = true;
     setNameRoomIntent("create", normalized !== nameInput.value ? "unsupported chars will be ignored" : "checking…");
     const run = nameCheckSeq;
     const delay = immediate ? 0 : NAME_CHECK_DELAY_MS;
@@ -787,20 +826,26 @@
       d = await res.json();
     } catch {
       if (run === nameCheckSeq) {
-        if (nameCreate) nameCreate.disabled = false;
+        setNameRoomReady(false);
         setNameRoomIntent("create", "offline check failed");
       }
       return;
     }
     if (run !== nameCheckSeq) return;
-    if (nameCreate) nameCreate.disabled = false;
-    if (d && d.ok && d.active === true) setNameRoomIntent("join", "room found");
-    else if (d && d.reason === "rate-limited") setNameRoomIntent("create", "slow down");
-    else setNameRoomIntent("create", "ready to create");
+    if (d && d.ok && d.active === true) {
+      setNameRoomIntent("join", "room found");
+      setNameRoomReady(true);
+    } else if (d && d.reason === "rate-limited") {
+      setNameRoomIntent("create", "slow down");
+      setNameRoomReady(false);
+    } else {
+      setNameRoomIntent("create", "ready to create");
+      setNameRoomReady(true);
+    }
   }
 
   function submitNameRoom(intent) {
-    if (busy || !done || !nameInput) return;
+    if (busy || !done || !nameInput || !nameReady) return;
     const name = normalizeRoomName(nameInput.value);
     if (!isValidRoomName(name)) {
       if (nameStatus) nameStatus.textContent = "4-40 chars, avoid obvious names";
@@ -813,6 +858,251 @@
     const cb = done;
     done = null;
     if (cb) cb({ named: true, name, intent }, `${intent}: ${name}`, { named: true, intent });
+  }
+
+  function shortcutLaunchFromUrl() {
+    const hash = location.hash && location.hash.startsWith("#") ? location.hash.slice(1) : "";
+    const hashParams = hash && hash.includes("=") ? new URLSearchParams(hash) : null;
+    const candidates = [];
+    if (location.search && location.search.includes("=")) candidates.push({ params: new URLSearchParams(location.search), localOnly: false });
+    if (hashParams) candidates.push({ params: hashParams, localParams: hashParams });
+
+    for (const item of candidates) {
+      const params = item.params;
+      const localParams = item.localParams || hashParams;
+      const localOnly = item.localOnly !== false;
+      let intent = String(params.get("shortcut") || params.get("intent") || params.get("mode") || params.get("action") || "").toLowerCase();
+      if (intent === "receive" || intent === "new") intent = "create";
+      if (intent === "send" || intent === "open") intent = "join";
+      if (intent === "payload") intent = "attach";
+      if (intent !== "create" && intent !== "join" && intent !== "attach") continue;
+
+      const name = normalizeRoomName(params.get("room") || params.get("name") || params.get("r") || "");
+      if (intent !== "attach" && !isValidRoomName(name)) continue;
+
+      const handoff = localOnly && localParams ? shortcutHandoffToken(localParams.get("handoff") || localParams.get("token") || "") : "";
+      const handoffUrl = handoff && localParams ? shortcutHandoffUrl(localParams.get("handoffUrl") || localParams.get("handoff_url") || "", handoff) : "";
+      if (handoff) return { intent, name, payload: null, handoff, handoffUrl };
+      const callback = localParams ? shortcutCallbackToken(localParams.get("callback") || localParams.get("cb") || "") : "";
+      const targetRole = localParams ? shortcutTargetRole(localParams.get("targetRole") || localParams.get("role") || "") : "";
+
+      const file = localParams ? shortcutFilePayload(localParams) : null;
+      if (file) return { intent, name, payload: { kind: "file", file }, callback, targetRole };
+
+      const text = localParams ? String(localParams.get("text") || localParams.get("message") || localParams.get("body") || "").trim() : "";
+      if (intent === "attach" && !text) continue;
+      return {
+        intent,
+        name,
+        callback,
+        targetRole,
+        payload: text ? { kind: "text", text: text.slice(0, SHORTCUT_TEXT_LIMIT) } : null,
+      };
+    }
+    return null;
+  }
+
+  function shortcutHandoffToken(value) {
+    const token = String(value || "").trim();
+    return /^[A-Za-z0-9_-]{24,96}$/.test(token) ? token : "";
+  }
+
+  function shortcutHandoffUrl(value, token) {
+    try {
+      const url = new URL(String(value || ""));
+      const localHost = url.hostname === "127.0.0.1";
+      const port = Number(url.port);
+      if (url.protocol !== "http:" || !localHost || !Number.isInteger(port) || port < 1024 || port > 65535) return "";
+      if (!url.pathname.includes(token)) return "";
+      return url.href;
+    } catch {
+      return "";
+    }
+  }
+
+  function shortcutCallbackToken(value) {
+    const clean = String(value || "")
+      .normalize("NFKC")
+      .trim()
+      .slice(0, 96);
+    return /^[A-Za-z0-9._ -]{4,96}$/.test(clean) && new Set(clean.replace(/[^A-Za-z0-9]/g, "").toLowerCase()).size >= 2 ? clean : "";
+  }
+
+  function shortcutTargetRole(value) {
+    const role = String(value || "").trim().toLowerCase();
+    return role === "seed" || role === "peer" ? role : "";
+  }
+
+  function shortcutFilePayload(params) {
+    const encoded = params.get("file") || params.get("fileB64") || params.get("b64") || params.get("data");
+    if (!encoded) return null;
+    try {
+      const parsed = parseShortcutFileData(encoded, params.get("mime") || params.get("type") || "");
+      if (!parsed || parsed.bytes.byteLength === 0 || parsed.bytes.byteLength > SHORTCUT_FILE_LIMIT) return null;
+      const name = shortcutFileName(params.get("filename") || params.get("fileName") || params.get("title"), parsed.mime);
+      return new File([parsed.bytes], name, { type: parsed.mime || "application/octet-stream" });
+    } catch {
+      return null;
+    }
+  }
+
+  function parseShortcutFileData(encoded, fallbackMime) {
+    const value = String(encoded || "").trim();
+    const dataUrl = value.match(/^data:([^;,]+)?(?:;[^,]*)?;base64,(.*)$/i);
+    if (dataUrl) {
+      return { mime: cleanMime(dataUrl[1] || fallbackMime), bytes: base64ToBytes(dataUrl[2] || "") };
+    }
+    return { mime: cleanMime(fallbackMime), bytes: base64ToBytes(value) };
+  }
+
+  function base64ToBytes(value) {
+    const normalized = String(value || "")
+      .replace(/\s+/g, "")
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
+    const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+    const raw = atob(padded);
+    const bytes = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    return bytes;
+  }
+
+  function cleanMime(value) {
+    const mime = String(value || "").trim().toLowerCase();
+    return /^[a-z0-9][a-z0-9.+-]*\/[a-z0-9][a-z0-9.+-]*$/i.test(mime) ? mime : "application/octet-stream";
+  }
+
+  function shortcutFileName(value, mime) {
+    const clean = String(value || "")
+      .normalize("NFKC")
+      .replace(/[\\/\0\r\n]+/g, " ")
+      .trim()
+      .slice(0, 96);
+    if (clean && clean !== "room" && clean !== "name") return clean;
+    const ext = mime === "text/plain" ? "txt" : mime === "image/jpeg" ? "jpg" : mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "bin";
+    return `wklej-shortcut.${ext}`;
+  }
+
+  function clearShortcutUrl() {
+    try {
+      const url = new URL(location.href);
+      url.hash = "";
+      for (const key of ["shortcut", "intent", "mode", "action", "room", "name", "r", "callback", "cb", "text", "message", "body", "file", "fileB64", "b64", "data", "filename", "fileName", "mime", "type"]) {
+        url.searchParams.delete(key);
+      }
+      history.replaceState(null, "", `${url.pathname}${url.search}`);
+    } catch {}
+  }
+
+  function startShortcutLaunch(launch) {
+    if (!launch || busy || !done) return false;
+    busy = true;
+    hideNameRoomModal();
+    stopNearby(true);
+    clearShortcutUrl();
+    const cb = done;
+    done = null;
+    if (cb) {
+      cb(
+        { named: true, name: launch.name, intent: launch.intent },
+        `${launch.intent}: ${launch.name}`,
+        {
+          named: true,
+          intent: launch.intent,
+          shortcut: true,
+          payload: launch.payload || null,
+          shortcutHandoff: launch.handoff || "",
+          shortcutHandoffUrl: launch.handoffUrl || "",
+          shortcutCallback: launch.callback || "",
+        },
+      );
+    }
+    return true;
+  }
+
+  function startShortcutAttach(launch) {
+    if (!launch || launch.intent !== "attach" || !launch.payload) return false;
+    const id = secureId();
+    clearShortcutUrl();
+    window.dispatchEvent(new CustomEvent("wklej-shortcut-payload", { detail: { id, payload: launch.payload, room: launch.name || "", targetRole: launch.targetRole || "" } }));
+    shareShortcutPayloadWithSession(id, launch.payload, launch.name || "", launch.targetRole || "");
+    return true;
+  }
+
+  function shareShortcutPayloadWithSession(id, payload, room, targetRole) {
+    const expiresAt = Date.now() + SHORTCUT_PAYLOAD_TTL_MS;
+    postShortcutPayload({ type: "wklej-shortcut-payload", id, expiresAt, room, targetRole, payload });
+    persistShortcutPayload(id, expiresAt, payload, room, targetRole);
+  }
+
+  function postShortcutPayload(envelope) {
+    if (!("BroadcastChannel" in window)) return;
+    try {
+      const channel = new BroadcastChannel(SHORTCUT_PAYLOAD_CHANNEL);
+      channel.postMessage(envelope);
+      setTimeout(() => channel.close(), 1200);
+    } catch {}
+  }
+
+  async function persistShortcutPayload(id, expiresAt, payload, room, targetRole) {
+    try {
+      const serial = await serializeShortcutPayload(payload);
+      if (!serial) return;
+      localStorage.setItem(
+        SHORTCUT_PAYLOAD_STORAGE,
+        JSON.stringify({
+          type: "wklej-shortcut-payload",
+          id,
+          expiresAt,
+          room,
+          targetRole,
+          payload: serial,
+        }),
+      );
+      setTimeout(() => {
+        try {
+          const raw = localStorage.getItem(SHORTCUT_PAYLOAD_STORAGE);
+          if (raw && JSON.parse(raw).id === id) localStorage.removeItem(SHORTCUT_PAYLOAD_STORAGE);
+        } catch {}
+      }, SHORTCUT_PAYLOAD_TTL_MS);
+    } catch {}
+  }
+
+  async function serializeShortcutPayload(payload) {
+    if (!payload || typeof payload !== "object") return null;
+    if (payload.kind === "text" && typeof payload.text === "string") {
+      return { kind: "text", text: payload.text.slice(0, SHORTCUT_TEXT_LIMIT) };
+    }
+    if (payload.kind !== "file" || !(payload.file instanceof File) || payload.file.size > SHORTCUT_FILE_LIMIT) return null;
+    const bytes = new Uint8Array(await payload.file.arrayBuffer());
+    return {
+      kind: "file",
+      name: payload.file.name,
+      mime: payload.file.type || "application/octet-stream",
+      file: bytesToBase64(bytes),
+    };
+  }
+
+  function bytesToBase64(bytes) {
+    let binary = "";
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+    }
+    return btoa(binary);
+  }
+
+  function handleShortcutUrlChange() {
+    const launch = shortcutLaunchFromUrl();
+    if (!startShortcutAttach(launch)) startShortcutLaunch(launch);
+  }
+
+  function installShortcutWatcher() {
+    if (shortcutWatchInstalled) return;
+    shortcutWatchInstalled = true;
+    window.addEventListener("hashchange", handleShortcutUrlChange);
+    window.addEventListener("popstate", handleShortcutUrlChange);
+    window.addEventListener("pageshow", handleShortcutUrlChange);
   }
 
   function renderManualCard(reason) {
@@ -1290,6 +1580,9 @@
   function begin(onComplete) {
     reset(false);
     done = onComplete;
+    installShortcutWatcher();
+    const launch = shortcutLaunchFromUrl();
+    if (startShortcutAttach(launch) || startShortcutLaunch(launch)) return;
     startNearby();
     renderPalette();
   }

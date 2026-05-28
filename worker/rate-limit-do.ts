@@ -8,13 +8,20 @@ const WINDOW_MS = 60_000;
 const PRESENCE_TTL_MS = 30_000;
 const INVITE_TTL_MS = 45_000;
 const PRESENCE_REFRESH_EVERY_MS = 8_000;
+const SHORTCUT_READY_TTL_MS = 150_000;
 const MAX_PRESENCE_IDS = 16;
 const MAX_INVITES = 32;
 const LIMITS: Record<string, number> = {
+  ice: 60, // TURN credential minting; enough for retries, bounded against abuse
+  tree: 90, // emoji tree fetches: enough for UI, too low for fast enumeration
+  session: 14, // completed pairing attempts: brute-force guard
   create: 10, // create room: 10/min
   join: 24, // join room: 24/min
   name: 8, // custom-name attempts: 8/min
   nameCheck: 36, // custom-name availability probes: 36/min
+  end: 12, // authenticated teardown attempts
+  shortcutReady: 24, // browser marks paired callbacks; no payload is stored
+  shortcutStatus: 90, // iOS Shortcut polling while it waits for pairing
 };
 
 interface Counter {
@@ -52,9 +59,16 @@ interface NearbyInvite {
 
 type Invites = Record<string, NearbyInvite>;
 
+interface ShortcutReady {
+  ready: true;
+  createdAt: number;
+  expiresAt: number;
+}
+
 const COUNTERS_KEY = "counters";
 const PRESENCE_KEY = "presence";
 const INVITES_KEY = "invites";
+const SHORTCUT_READY_KEY = "shortcut-ready";
 
 export class RateLimit implements DurableObject {
   constructor(
@@ -67,6 +81,14 @@ export class RateLimit implements DurableObject {
 
     if (url.pathname === "/presence" && req.method === "POST") {
       return this.handlePresence(req);
+    }
+
+    if (url.pathname === "/shortcut-ready" && req.method === "POST") {
+      return this.handleShortcutReady();
+    }
+
+    if (url.pathname === "/shortcut-status" && req.method === "GET") {
+      return this.handleShortcutStatus();
     }
 
     const action = url.searchParams.get("action") ?? "";
@@ -203,12 +225,35 @@ export class RateLimit implements DurableObject {
     if (existing === null || existing > at) await this.ctx.storage.setAlarm(at);
   }
 
+  private async handleShortcutReady(): Promise<Response> {
+    const now = Date.now();
+    const status: ShortcutReady = {
+      ready: true,
+      createdAt: now,
+      expiresAt: now + SHORTCUT_READY_TTL_MS,
+    };
+    await this.ctx.storage.put(SHORTCUT_READY_KEY, status);
+    await this.scheduleAlarm(status.expiresAt);
+    return Response.json({ ready: true, ttl: Math.ceil(SHORTCUT_READY_TTL_MS / 1000) });
+  }
+
+  private async handleShortcutStatus(): Promise<Response> {
+    const now = Date.now();
+    const status = await this.ctx.storage.get<ShortcutReady>(SHORTCUT_READY_KEY);
+    if (!status || status.expiresAt <= now) {
+      if (status) await this.ctx.storage.delete(SHORTCUT_READY_KEY);
+      return Response.json({ ready: false, ttl: 0 });
+    }
+    return Response.json({ ready: true, ttl: Math.max(0, Math.ceil((status.expiresAt - now) / 1000)) });
+  }
+
   // Expire counters whose window has elapsed; reschedule for any survivors.
   async alarm(): Promise<void> {
     const now = Date.now();
     const counters = (await this.ctx.storage.get<Counters>(COUNTERS_KEY)) ?? {};
     const presence = prunePresence((await this.ctx.storage.get<Presence>(PRESENCE_KEY)) ?? {}, now);
     const invites = pruneInvites((await this.ctx.storage.get<Invites>(INVITES_KEY)) ?? {}, presence, now);
+    const shortcutReady = await this.ctx.storage.get<ShortcutReady>(SHORTCUT_READY_KEY);
     let next: number | null = null;
     for (const k of Object.keys(counters)) {
       if (counters[k]!.resetAt <= now) delete counters[k];
@@ -220,11 +265,13 @@ export class RateLimit implements DurableObject {
     for (const expiresAt of Object.values(invites).map((invite) => invite.expiresAt)) {
       next = next === null ? expiresAt : Math.min(next, expiresAt);
     }
+    const hasShortcutReady = !!shortcutReady && shortcutReady.expiresAt > now;
+    if (hasShortcutReady) next = next === null ? shortcutReady.expiresAt : Math.min(next, shortcutReady.expiresAt);
 
     const hasCounters = Object.keys(counters).length > 0;
     const hasPresence = Object.keys(presence).length > 0;
     const hasInvites = Object.keys(invites).length > 0;
-    if (!hasCounters && !hasPresence && !hasInvites) {
+    if (!hasCounters && !hasPresence && !hasInvites && !hasShortcutReady) {
       await this.ctx.storage.deleteAll();
     } else {
       if (hasCounters) await this.ctx.storage.put(COUNTERS_KEY, counters);
@@ -233,6 +280,7 @@ export class RateLimit implements DurableObject {
       else await this.ctx.storage.delete(PRESENCE_KEY);
       if (hasInvites) await this.ctx.storage.put(INVITES_KEY, invites);
       else await this.ctx.storage.delete(INVITES_KEY);
+      if (!hasShortcutReady) await this.ctx.storage.delete(SHORTCUT_READY_KEY);
       if (next !== null) await this.ctx.storage.setAlarm(next);
     }
   }

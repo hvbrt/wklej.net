@@ -14,6 +14,7 @@ import { isRelayMessage, sanitizeRelay } from "./signaling";
 
 const STATE_KEY = "state";
 const MAX_WS_MESSAGE_CHARS = 64_000;
+const EXTENSION_WINDOW_MS = 10_000;
 
 type UpgradeDecision =
   | { ok: true; role: Role; socketId: string; endKey: string; state: RoomState; reconnect?: boolean }
@@ -56,7 +57,10 @@ export class DurableRoom implements DurableObject {
   private async handleUpgrade(role: Role, roomKey: string, resumeKey: string): Promise<Response> {
     const decision = await this.reserveSocket(role, roomKey, resumeKey);
     if (!decision.ok) {
-      if (decision.terminateFirst) await this.terminate(decision.state);
+      if (decision.terminateFirst) {
+        this.broadcast({ type: "peer-overflow", reason: decision.reason }, decision.state);
+        await this.terminate(decision.state);
+      }
       else if (decision.destroyFirst) await this.destroy();
       return this.reject(1008, decision.reason);
     }
@@ -86,6 +90,7 @@ export class DurableRoom implements DurableObject {
           phase: "waiting-peer",
           seedSocketId: crypto.randomUUID(),
           seedEndKey: crypto.randomUUID(),
+          extensionUsed: false,
         };
         await txn.put(STATE_KEY, next);
         await txn.setAlarm(next.expiresAt);
@@ -117,6 +122,7 @@ export class DurableRoom implements DurableObject {
         peerEndKey: crypto.randomUUID(),
         connectedAt: now,
         expiresAt: now + CONNECTED_TTL_MS,
+        extensionUsed: false,
       };
       await txn.put(STATE_KEY, next);
       await txn.setAlarm(next.expiresAt);
@@ -180,6 +186,11 @@ export class DurableRoom implements DurableObject {
       if (st.phase !== "connected") return;
       const clean = sanitizeRelay(msg);
       if (clean) this.send(other(role), clean, role === "seed" ? st.peerSocketId : st.seedSocketId);
+      return;
+    }
+
+    if (msg.type === "extend-session") {
+      await this.extendConnectedSession(st, role, meta.id);
       return;
     }
 
@@ -254,6 +265,30 @@ export class DurableRoom implements DurableObject {
   private canResume(st: RoomState, role: Role, endKey: string): boolean {
     if (role === "seed") return safeEqual(endKey, st.seedEndKey);
     return safeEqual(endKey, st.peerEndKey);
+  }
+
+  private async extendConnectedSession(st: RoomState, role: Role, socketId: string): Promise<void> {
+    const result = await this.ctx.storage.transaction(async (txn) => {
+      const current = await txn.get<RoomState>(STATE_KEY);
+      if (!current || current.sessionNonce !== st.sessionNonce) return { ok: false as const, reason: "no-session" };
+      if (current.phase !== "connected") return { ok: false as const, reason: "not-connected" };
+      if (!this.isCurrentSocket(current, role, socketId)) return { ok: false as const, reason: "stale-socket" };
+      if (current.extensionUsed) return { ok: false as const, reason: "extension-used" };
+
+      const now = Date.now();
+      if (current.expiresAt - now > EXTENSION_WINDOW_MS) return { ok: false as const, reason: "too-early" };
+      const expiresAt = now + CONNECTED_TTL_MS;
+      const next: RoomState = { ...current, extensionUsed: true, expiresAt };
+      await txn.put(STATE_KEY, next);
+      await txn.setAlarm(expiresAt);
+      return { ok: true as const, state: next };
+    });
+
+    if (result.ok) {
+      this.broadcast({ type: "session-extended", expiresAt: result.state.expiresAt }, result.state);
+    } else {
+      this.send(role, { type: "session-extend-denied", reason: result.reason }, socketId);
+    }
   }
 
   private async terminate(st?: RoomState, exceptSocketId?: string): Promise<void> {

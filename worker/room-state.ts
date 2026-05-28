@@ -28,6 +28,7 @@ export interface RoomState {
   peerSocketId?: string;
   peerEndKey?: string;
   connectedAt?: number;
+  extensionUsed?: boolean;
 }
 
 export interface SocketMeta {
@@ -42,7 +43,11 @@ export type WSMessage =
   | { type: "answer"; sdp: unknown }
   | { type: "ice-candidate"; candidate: unknown }
   | { type: "session-expired" }
+  | { type: "session-extended"; expiresAt: number }
+  | { type: "session-extend-denied"; reason: string }
+  | { type: "peer-overflow"; reason: string }
   | { type: "terminate" }
+  | { type: "extend-session" }
   | { type: "role"; role: Role; endKey: string; theme: SessionTheme }
   | { type: "start-webrtc"; initiator: boolean; theme: SessionTheme }
   | { type: "error"; reason: string };

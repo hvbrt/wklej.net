@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pl">
+<html lang="pl" data-build-fingerprint="{{BUILD_FINGERPRINT}}" data-build-hash="{{BUILD_HASH}}" data-build-signed="{{BUILD_SIGNED}}" data-build-public-key="{{BUILD_PUBLIC_KEY}}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#edf7ff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#070b16" media="(prefers-color-scheme: dark)" />
     <title>wklej.net — ephemeral P2P</title>
-    <link rel="stylesheet" href="{{CSS}}" />
+    <link rel="stylesheet" href="{{CSS}}" integrity="{{CSS_INTEGRITY}}" crossorigin="anonymous" />
   </head>
   <body>
     <div class="aurora" aria-hidden="true"></div>
@@ -16,18 +16,15 @@
     <main class="stage">
       <section class="glass card center pairing-card" data-screen="pairing">
         <header class="brand compact">
-          <h1 aria-label="wklej net">
-            <span class="brand-word" aria-hidden="true"><span>w</span><span>k</span><span>l</span><span>e</span><span>j</span></span>
-            <span class="logo-dot" aria-hidden="true">®</span>
-            <span class="tld" aria-hidden="true"><span>n</span><span>e</span><span>t</span></span>
+          <h1 aria-label="wklej">
+            <span class="brand-word" aria-hidden="true"><span class="brand-fill">wklej</span></span>
           </h1>
         </header>
 
-        <div class="moji-connect" aria-label="moji connect"><span class="moji-part">moji</span><span class="connect-part">connect</span></div>
         <p class="hint pair-instructions">TAKE THREE</p>
         <div class="pair-actions" aria-label="pairing options">
           <button id="page-info" class="pair-action" type="button" aria-label="instructions" title="instructions" aria-haspopup="dialog">i</button>
-          <button id="room-name-open" class="pair-action" type="button" aria-label="named room" title="named room" aria-haspopup="dialog">+</button>
+          <button id="room-name-open" class="pair-action create-enjoy-action" type="button" aria-label="create and join named room" title="create and join named room" aria-haspopup="dialog">create ∧ join</button>
         </div>
         <div class="pair-meta">
           <span id="pair-crumb" class="pair-crumb"></span>
@@ -52,7 +49,7 @@
               aria-label="room name"
             />
             <div class="room-name-actions">
-              <button id="room-name-create" class="room-name-action primary" type="button">create</button>
+              <button id="room-name-create" class="room-name-action primary" type="button" hidden>create</button>
             </div>
             <p id="room-name-status" class="room-name-status">use a non-obvious name</p>
           </div>
@@ -66,8 +63,8 @@
           <div id="nearby-invite" class="nearby-invite" hidden></div>
         </div>
         <div class="cd"><span id="cd-pair">120</span>s</div>
-        <p class="legal">DIRECT P2P then RELAY</p>
         <p class="tag footer-tag">ephemeral · peer-to-peer · zero storage</p>
+        <p class="build-line"><span id="build-state">checking build</span> <span id="build-fingerprint">{{BUILD_FINGERPRINT}}</span></p>
       </section>
 
       <section class="glass card center loading-card" data-screen="seed-wait" hidden>
@@ -87,13 +84,15 @@
         <header class="conn-head">
           <span id="health" class="badge ok">connected</span>
           <span id="transport" class="badge transport pending">…</span>
+          <span id="overflow-badge" class="badge overflow" hidden>third peer blocked</span>
+          <span id="build-badge" class="badge build">build {{BUILD_FINGERPRINT}}</span>
+          <span id="peer-build-badge" class="badge build-peer" hidden aria-label="same build">✓</span>
           <span id="session-dots" class="session-dots" aria-label="private session colour check" title="compare these dots on both devices" hidden>
             <span></span>
             <span></span>
             <span></span>
           </span>
           <span class="grow"></span>
-          <span class="cd small" id="conn-cd-wrap"><span id="cd-conn">120</span>s</span>
         </header>
 
         <div id="message-board" class="message-board" aria-live="polite" aria-label="P2P messages" hidden>
@@ -122,7 +121,10 @@
           <button id="zip-all" class="att-zip" type="button" title="download all attachments as zip" aria-label="download all attachments as zip">zip ↓</button>
         </div>
         <div id="attachments" class="attachments"></div>
-        <p class="legal session-legal">P2P</p>
+        <div class="session-footer" aria-label="session time">
+          <span class="cd small session-countdown" id="conn-cd-wrap"><span id="cd-conn">120</span>s</span>
+          <button id="session-extend" class="session-extend" type="button" hidden aria-label="extend session by 120 seconds">+120s</button>
+        </div>
       </section>
 
       <section class="glass card center" data-screen="ended" hidden>
@@ -139,10 +141,14 @@
         <button id="info-close" class="info-close" type="button" aria-label="close">×</button>
         <div id="info-title" class="info-title">how it works</div>
         <ul class="info-list">
-          <li>click or tap three emoji on the map in the same order on both devices</li>
-          <li>swipe across the globe or tap + button to create or join a named connection</li>
-          <li>nearby devices can start a quick send flow in same network</li>
-          <li>text and files travel by direct P2P or if there is network limit by relay node. No data is kept, when RELAY node takes traffic there is pass-through maintained by Cloudflare. Use responsibly and be aware there might be someone with not kind intention. Always check on both sides that three colour dots match the pattern.</li>
+          <li>easy and secure file transfer between devices</li>
+          <li>click or tap three emoji on both devices in the same order to verify and create a direct connection</li>
+          <li>swipe across the globe or tap create ∧ join to use a named connection</li>
+          <li>nearby devices can start a quick send flow on the same network</li>
+          <li>text and files are encrypted in the browser before transfer</li>
+          <li>direct device-to-device connection is used by default; when it is unavailable, encrypted traffic retries through relay-only Cloudflare relay mode</li>
+          <li>no data is stored</li>
+          <li>use responsibly and always check that the colour dots match on both devices</li>
         </ul>
         <div id="info-dot-pattern" class="info-dot-pattern" aria-label="example colour dot pattern">
           <span></span>
@@ -175,6 +181,6 @@
         <button class="att-action btn icon" type="button"></button>
       </div>
     </template>
-    <script src="{{APP}}"></script>
+    <script src="{{APP}}" integrity="{{APP_INTEGRITY}}" crossorigin="anonymous"></script>
   </body>
 </html>

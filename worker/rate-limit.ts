@@ -16,16 +16,32 @@ function hashNearbyNetwork(ip: string): Promise<string> {
   return hashValue(`nearby:${nearbyNetworkScope(ip)}`);
 }
 
+function hashShortcutCallback(callback: string): Promise<string> {
+  return hashValue(`shortcut-callback:${callback.trim().toLowerCase()}`);
+}
+
 async function check(
   rl: DurableObjectNamespace,
   ip: string,
-  action: "create" | "join" | "name" | "nameCheck",
+  action: "ice" | "tree" | "session" | "create" | "join" | "name" | "nameCheck" | "end" | "shortcutReady" | "shortcutStatus",
 ): Promise<boolean> {
   const id = rl.idFromName(await hashIp(ip));
   const stub = rl.get(id);
   const res = await stub.fetch(`https://ratelimit/check?action=${action}`);
   const { allowed } = await res.json<{ allowed: boolean }>();
   return allowed;
+}
+
+export function allowIce(rl: DurableObjectNamespace, ip: string): Promise<boolean> {
+  return check(rl, ip, "ice");
+}
+
+export function allowTree(rl: DurableObjectNamespace, ip: string): Promise<boolean> {
+  return check(rl, ip, "tree");
+}
+
+export function allowPairSession(rl: DurableObjectNamespace, ip: string): Promise<boolean> {
+  return check(rl, ip, "session");
 }
 
 export function allowCreate(rl: DurableObjectNamespace, ip: string): Promise<boolean> {
@@ -42,6 +58,34 @@ export function allowNamedSession(rl: DurableObjectNamespace, ip: string): Promi
 
 export function allowNamedCheck(rl: DurableObjectNamespace, ip: string): Promise<boolean> {
   return check(rl, ip, "nameCheck");
+}
+
+export function allowEnd(rl: DurableObjectNamespace, ip: string): Promise<boolean> {
+  return check(rl, ip, "end");
+}
+
+export function allowShortcutReady(rl: DurableObjectNamespace, ip: string): Promise<boolean> {
+  return check(rl, ip, "shortcutReady");
+}
+
+export function allowShortcutStatus(rl: DurableObjectNamespace, ip: string): Promise<boolean> {
+  return check(rl, ip, "shortcutStatus");
+}
+
+export async function markShortcutReady(rl: DurableObjectNamespace, callback: string): Promise<{ ready: boolean; ttl: number }> {
+  const id = rl.idFromName(await hashShortcutCallback(callback));
+  const stub = rl.get(id);
+  const res = await stub.fetch("https://ratelimit/shortcut-ready", { method: "POST" });
+  if (!res.ok) return { ready: false, ttl: 0 };
+  return res.json<{ ready: boolean; ttl: number }>();
+}
+
+export async function getShortcutStatus(rl: DurableObjectNamespace, callback: string): Promise<{ ready: boolean; ttl: number }> {
+  const id = rl.idFromName(await hashShortcutCallback(callback));
+  const stub = rl.get(id);
+  const res = await stub.fetch("https://ratelimit/shortcut-status");
+  if (!res.ok) return { ready: false, ttl: 0 };
+  return res.json<{ ready: boolean; ttl: number }>();
 }
 
 export interface NearbySelection {
