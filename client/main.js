@@ -52,8 +52,10 @@
       throw new Error("build fingerprint mismatch");
     }
     await verifyManifestSignature(manifest);
-    await verifyPublicAsset(manifest, BUILD_INFO.appPath);
-    await verifyPublicAsset(manifest, BUILD_INFO.cssPath);
+    await Promise.all([
+      verifyPublicAsset(manifest, BUILD_INFO.appPath),
+      verifyPublicAsset(manifest, BUILD_INFO.cssPath),
+    ]);
     setBuildStatus(manifest.signature && manifest.signature.alg !== "none" ? "signed build" : "build verified", "ok");
   }
 
@@ -435,8 +437,9 @@
   async function waitForNamedRoom(selection) {
     setLoading("waiting");
     let last = { ok: false, reason: "no-room" };
-    for (let i = 0; i < 6; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 700));
+    const waits = [220, 280, 360, 500, 700, 900, 1200];
+    for (let i = 0; i < waits.length; i++) {
+      await new Promise((resolve) => setTimeout(resolve, waits[i]));
       try {
         const d = await createSession(selection);
         last = d || last;
@@ -450,7 +453,7 @@
   async function waitForInvitedSeed(selection) {
     setLoading("waiting");
     for (let i = 0; i < 20; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      if (i > 0) await new Promise((resolve) => setTimeout(resolve, 300));
       let d;
       try {
         d = await createSession(selection);

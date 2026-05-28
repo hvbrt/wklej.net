@@ -8,7 +8,7 @@
   const CHUNK_SIZE = 16 * 1024; // 16 KiB — safe across browsers incl. iOS Safari
   const BUFFER_HIGH = 8 * 1024 * 1024; // pause sending above 8 MiB buffered
   const BUFFER_LOW = 256 * 1024; // resume when drained below 256 KiB
-  const AUTO_FALLBACK_MS = 6500;
+  const AUTO_FALLBACK_MS = 2600;
   const E2EE_MAGIC = 0xe2;
   const E2EE_JSON = 1;
   const E2EE_BINARY = 2;
@@ -32,9 +32,11 @@
     return value === "direct" || value === "relay" ? value : "";
   }
 
-  // Auto starts with direct STUN/P2P. If direct cannot open the channel, both
-  // peers renegotiate through relay-only TURN.
-  async function getIceConfig(mode) {
+  let relayConfigPromise = null;
+
+  // Auto starts with direct STUN/P2P. Relay credentials are warmed in the
+  // background, so fallback does not pay a TURN minting round-trip later.
+  async function fetchIceConfig(mode) {
     try {
       const r = await fetch(`/api/ice?mode=${mode}`);
       if (!r.ok) {
@@ -62,6 +64,26 @@
       if (mode === "relay") throw err;
       return STUN_FALLBACK;
     }
+  }
+
+  function getIceConfig(mode) {
+    if (mode !== "relay") return fetchIceConfig(mode);
+    if (!relayConfigPromise) {
+      relayConfigPromise = fetchIceConfig("relay").catch((err) => {
+        relayConfigPromise = null;
+        throw err;
+      });
+    }
+    return relayConfigPromise;
+  }
+
+  function prewarmRelayConfig() {
+    if (relayConfigPromise) return;
+    relayConfigPromise = fetchIceConfig("relay").catch((err) => {
+      relayConfigPromise = null;
+      throw err;
+    });
+    relayConfigPromise.catch(() => {});
   }
 
   let pc = null;
@@ -359,6 +381,7 @@
     fallbackStarted = false;
 
     await createPeer(activeMode);
+    if (preferredMode === "auto") prewarmRelayConfig();
 
     if (initiator) {
       wire(pc.createDataChannel("wklej", { ordered: true }));
@@ -447,7 +470,7 @@
   }
 
   function canFallback() {
-    return preferredMode === "auto" && initiatorRole && !fallbackStarted && !isOpen() && activeMode === "direct";
+    return preferredMode === "auto" && initiatorRole && !fallbackStarted && !channelOpen() && activeMode === "direct";
   }
 
   async function triggerTurnFallback(reason) {
@@ -691,6 +714,7 @@
     fallbackStarted = false;
     initiatorRole = false;
     activeMode = "direct";
+    relayConfigPromise = null;
     resetE2EE();
   }
 
