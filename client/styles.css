@@ -1593,6 +1593,12 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   background: rgba(255,255,255,.68);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.42), 0 12px 24px -20px rgba(20,24,43,.68);
 }
+.grace-extend[hidden] { display: none; }
+.grace-extend:disabled {
+  opacity: .45;
+  cursor: default;
+  box-shadow: none;
+}
 .session-themed .grace-extend {
   color: #05070d;
   background: rgba(255,255,255,.68);

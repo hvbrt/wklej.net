@@ -48,6 +48,7 @@
   let graceCountdownTimeout = 0;
   let graceExtendInterval = 0;
   let graceExtendTimeout = 0;
+  let graceExtensionUsed = false;
 
   function clearTimers() {
     state.timers.forEach((t) => {
@@ -133,6 +134,7 @@
     state.nearbySend = false;
     state.pendingPayload = null;
     pendingReset = null;
+    graceExtensionUsed = false;
     clearGracePrompt();
     clearSessionTheme();
     clearTimers();
@@ -1048,10 +1050,16 @@
     let left = GRACE_PROMPT_SECONDS;
     count.textContent = String(left);
     if (text) text.textContent = graceReasonText(pendingReset.reason);
+    const extend = $("grace-extend");
+    const end = $("grace-end");
+    if (extend) {
+      extend.hidden = graceExtensionUsed;
+      extend.disabled = graceExtensionUsed;
+    }
     modal.hidden = false;
     requestAnimationFrame(() => modal.classList.add("show"));
-    const extend = $("grace-extend");
-    if (extend) requestAnimationFrame(() => extend.focus({ preventScroll: true }));
+    const focusTarget = graceExtensionUsed ? end : extend;
+    if (focusTarget) requestAnimationFrame(() => focusTarget.focus({ preventScroll: true }));
     graceCountdownInterval = setInterval(() => {
       if (left > 1) {
         left -= 1;
@@ -1062,7 +1070,8 @@
   }
 
   function extendGraceShutdown() {
-    if (!pendingReset) return;
+    if (!pendingReset || graceExtensionUsed) return;
+    graceExtensionUsed = true;
     clearGracePrompt();
     setHealth("warn", "extended");
     let left = GRACE_EXTEND_SECONDS;
