@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#edf7ff" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#070b16" media="(prefers-color-scheme: dark)" />
 <title>wklej.net — ephemeral P2P</title>
-<link rel="stylesheet" href="/e53679409b.css" />
+<link rel="stylesheet" href="/f071f0b760.css" />
 </head>
 <body>
 <div class="aurora" aria-hidden="true"></div>
@@ -97,6 +97,11 @@ rows="1"
 aria-label="write text or drop file here - przeciagnij plik lub napisz wiadomość"
 ></textarea>
 <div id="editor-placeholder" class="editor-placeholder" aria-hidden="true"></div>
+<div id="session-dots" class="session-dots" aria-label="private session colour check" title="compare these dots on both devices" hidden>
+<span></span>
+<span></span>
+<span></span>
+</div>
 <div class="editor-bar">
 <button id="attach" class="btn icon attach-pulse" type="button" title="attach file" aria-label="attach file">📎</button>
 <input id="file-input" type="file" multiple hidden />
@@ -124,10 +129,15 @@ aria-label="write text or drop file here - przeciagnij plik lub napisz wiadomoś
 <div id="info-title" class="info-title">how it works</div>
 <ul class="info-list">
 <li>tap three emoji in the same order on both devices you want to connect</li>
-<li>swipe across the globe or tap + button to create or join a named room</li>
-<li>nearby devices can start a quick send flow</li>
-<li>text and files travel by direct P2P or, when the network limits it, by relay. The session window marks this with colored text notes. No information is kept on servers longer than the live session. The connection is designed and reviewed as safe and private. Remember to use it responsibly, because there can always be someone with unkind intentions.</li>
+<li>swipe across the globe or tap + button to create or join a named connection</li>
+<li>nearby devices can start a quick send flow in same network</li>
+<li>text and files travel by direct P2P or if there is network limit by relay node. No data is kept, when RELAY node takes traffic there is pass-through maintained by Cloudflare. Use responsibly and be aware there might be someone with not kind intention. Always check on both sides that three colour dots match the pattern.</li>
 </ul>
+<div id="info-dot-pattern" class="info-dot-pattern" aria-label="example colour dot pattern">
+<span></span>
+<span></span>
+<span></span>
+</div>
 </div>
 </div>
 <div id="grace-modal" class="grace-modal" hidden>
@@ -152,6 +162,6 @@ aria-label="write text or drop file here - przeciagnij plik lub napisz wiadomoś
 <button class="att-action btn icon" type="button"></button>
 </div>
 </template>
-<script src="/66694c9a9a.js"></script>
+<script src="/c8ac2b1448.js"></script>
 </body>
 </html>

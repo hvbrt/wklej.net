@@ -107,6 +107,36 @@
     panel.style.removeProperty("--session-c");
   }
 
+  function setDotPattern(el, colors) {
+    if (!el || !isTheme(colors)) return;
+    Array.from(el.querySelectorAll("span")).forEach((dot, index) => {
+      dot.style.setProperty("--dot", colors[index]);
+    });
+    el.hidden = false;
+  }
+
+  function clearSafetyDots() {
+    const dots = $("session-dots");
+    if (!dots) return;
+    dots.hidden = true;
+    Array.from(dots.querySelectorAll("span")).forEach((dot) => dot.style.removeProperty("--dot"));
+  }
+
+  function applySafetyDots(colors) {
+    setDotPattern($("session-dots"), colors);
+  }
+
+  function randomDotPattern() {
+    const bytes = new Uint8Array(9);
+    crypto.getRandomValues(bytes);
+    const base = bytes[0] % 360;
+    return [
+      `${base} ${72 + (bytes[1] % 18)}% ${42 + (bytes[2] % 14)}%`,
+      `${(base + 115 + (bytes[3] % 46)) % 360} ${70 + (bytes[4] % 20)}% ${44 + (bytes[5] % 14)}%`,
+      `${(base + 222 + (bytes[6] % 44)) % 360} ${72 + (bytes[7] % 18)}% ${46 + (bytes[8] % 12)}%`,
+    ];
+  }
+
   function seedWaitText() {
     if (state.selection && state.selection.named) return state.selection.name || state.label.replace(/^(create|join):\s*/i, "");
     return state.label;
@@ -137,6 +167,7 @@
     graceExtensionUsed = false;
     clearGracePrompt();
     clearSessionTheme();
+    clearSafetyDots();
     clearTimers();
     show("pairing");
     countdown("cd-pair", 120, () => hardReset("expired", false));
@@ -352,6 +383,7 @@
         setTransport("repair", true);
       },
       onTransport: onTransport,
+      onVerify: applySafetyDots,
       onClose: () => {
         if (state.connected && !state.ending) hardReset("p2p disconnected", true);
       },
@@ -977,6 +1009,7 @@
   function showInfoModal() {
     const modal = $("info-modal");
     if (!modal) return;
+    setDotPattern($("info-dot-pattern"), randomDotPattern());
     modal.hidden = false;
     modal.classList.add("show");
     const close = $("info-close");
@@ -1140,6 +1173,7 @@
     overlay.hidden = true;
     clearAttachmentNavigationProtection();
     clearSessionTheme();
+    clearSafetyDots();
     window.__P.reset();
   }
 

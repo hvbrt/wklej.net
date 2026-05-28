@@ -51,6 +51,10 @@
   let fallbackStarted = false;
   let fallbackTimer = 0;
   let signalChain = Promise.resolve();
+  let verifyLocalNonce = "";
+  let verifyRemoteNonce = "";
+  let verifySent = false;
+  let verifyEmitted = false;
   const canceled = new Set(); // transfer ids canceled by either side
   const incoming = new Map();
   const pendingSignals = [];
@@ -62,6 +66,7 @@
     ch.bufferedAmountLowThreshold = BUFFER_LOW;
     ch.onopen = () => {
       clearFallbackTimer();
+      sendVerificationNonce();
       cb.onOpen && cb.onOpen();
       emitTransport("open").catch(() => {});
       setTimeout(() => emitTransport("settled").catch(() => {}), 1200);
@@ -74,7 +79,10 @@
     if (typeof data === "string") {
       let m;
       try { m = JSON.parse(data); } catch { return; }
-      if (m.t === "msg") {
+      if (m.t === "verify" && validVerifyNonce(m.nonce)) {
+        verifyRemoteNonce = m.nonce;
+        emitVerificationPattern().catch(() => {});
+      } else if (m.t === "msg") {
         cb.onText && cb.onText(m.text);
       } else if (m.t === "meta") {
         const meta = cleanIncomingMeta(m);
@@ -311,6 +319,44 @@
     if (isOpen()) channel.send(JSON.stringify({ t: "msg", text }));
   }
 
+  // Visual safety check: nonces travel only over the already-open RTC channel.
+  function localVerifyNonce() {
+    if (verifyLocalNonce) return verifyLocalNonce;
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    verifyLocalNonce = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    return verifyLocalNonce;
+  }
+
+  function validVerifyNonce(value) {
+    return typeof value === "string" && /^[a-f0-9]{32}$/i.test(value);
+  }
+
+  function sendVerificationNonce() {
+    if (!isOpen() || verifySent) return;
+    verifySent = true;
+    try {
+      channel.send(JSON.stringify({ t: "verify", nonce: localVerifyNonce() }));
+    } catch {}
+  }
+
+  async function emitVerificationPattern() {
+    if (verifyEmitted || !cb.onVerify || !verifyRemoteNonce) return;
+    const local = localVerifyNonce();
+    const pair = [local.toLowerCase(), verifyRemoteNonce.toLowerCase()].sort().join(":");
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`wklej-verify-v1:${pair}`));
+    const bytes = new Uint8Array(digest);
+    const colors = [0, 1, 2].map((index) => {
+      const offset = index * 3;
+      const hue = (bytes[offset] + bytes[offset + 1]) % 360;
+      const sat = 72 + (bytes[offset + 2] % 18);
+      const light = 42 + (bytes[offset + 9] % 16);
+      return `${hue} ${sat}% ${light}%`;
+    });
+    verifyEmitted = true;
+    cb.onVerify(colors);
+  }
+
   function drain() {
     return new Promise((resolve) => {
       if (channel.bufferedAmount <= BUFFER_HIGH) return resolve();
@@ -436,6 +482,10 @@
     fallbackStarted = false;
     initiatorRole = false;
     activeMode = "direct";
+    verifyLocalNonce = "";
+    verifyRemoteNonce = "";
+    verifySent = false;
+    verifyEmitted = false;
   }
 
   window.__T = { start, signal, sendText, sendFile, cancelTransfer, close, isOpen, getTransport: detectTransport };
