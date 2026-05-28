@@ -52,6 +52,7 @@
   let nameCheckTimer = 0;
   let nameCheckSeq = 0;
   let firstLevelCache = null;
+  let nearbyDevicesSignature = "";
   const seenInvites = new Set();
   const nearbyDrafts = new Map();
 
@@ -526,9 +527,17 @@
 
   function renderNearbyDevices(devices) {
     if (!nearbyList) return;
+    if (activeGuide) {
+      nearbyDevicesSignature = "";
+      nearbyList.textContent = "";
+      return;
+    }
+    const visibleDevices = devices.slice(0, 3);
+    const signature = visibleDevices.map((device) => `${device.id}:${device.label || ""}`).join("|");
+    if (signature && signature === nearbyDevicesSignature && nearbyList.children.length) return;
+    nearbyDevicesSignature = signature;
     nearbyList.textContent = "";
-    if (activeGuide) return;
-    for (const device of devices.slice(0, 3)) {
+    for (const device of visibleDevices) {
       const label = String(device.label || "urządzenie obok");
       const kind = deviceKind(label);
       const draft = nearbyDraft(device.id);
@@ -616,6 +625,8 @@
       if (draft.file) draft.text = "";
       text.value = draft.text;
       sync();
+      const payload = nearbyPayload(draft);
+      if (payload) startNearbySend(device, payload);
     });
 
     text.addEventListener("input", () => {
@@ -938,6 +949,7 @@
     }
     nearbyStartedAt = 0;
     nearbyLastActiveAt = 0;
+    nearbyDevicesSignature = "";
     if (nearbyList) nearbyList.textContent = "";
     if (notify) sendNearby(false);
   }
@@ -1207,6 +1219,7 @@
     pickedAssets = [];
     bucket = null;
     firstLevelCache = null;
+    nearbyDevicesSignature = "";
     done = null;
     busy = false;
     activeGuide = null;

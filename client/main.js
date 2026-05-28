@@ -1083,7 +1083,7 @@
     }, 1000);
     graceExtendTimeout = setTimeout(() => {
       clearGraceTimers();
-      showGracePrompt();
+      finalizePendingReset();
     }, GRACE_EXTEND_SECONDS * 1000);
   }
 
