@@ -53,6 +53,7 @@
   --shadow: 0 20px 60px -20px rgba(40,30,90,0.35);
   --lockup-width: 184px;
   --lockup-gap: 22px;
+  --brand-letter-gap: clamp(9px, 2.65vw, 14px);
   --logo-dot-size: 16px;
   --emoji-tile:
     radial-gradient(circle at 36% 20%, rgba(255,255,255,.38), transparent 34%),
@@ -302,8 +303,28 @@ body {
   font-size: clamp(30px, 9.8vw, 42px);
   letter-spacing: 0.15px;
 }
-.brand-word { justify-self: end; text-align: right; letter-spacing: clamp(11px, 3.6vw, 18px); }
-.tld { justify-self: start; text-align: left; letter-spacing: clamp(11px, 3.6vw, 18px); background: linear-gradient(90deg,var(--accent),var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.brand-word,
+.tld {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--brand-letter-gap);
+  letter-spacing: 0;
+  font-kerning: none;
+  font-variant-ligatures: none;
+}
+.brand-word { justify-self: end; text-align: right; }
+.tld { justify-self: start; text-align: left; }
+.brand-word > span,
+.tld > span {
+  display: inline-block;
+  line-height: 1;
+}
+.tld > span {
+  background: linear-gradient(90deg,var(--accent),var(--accent2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
 .tag { color: var(--muted); font-size: 12px; margin: 0; }
 .footer-tag {
   margin-top: 6px;
@@ -1630,8 +1651,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   .glass { padding: 22px 16px; }
   .pairing-card { margin-bottom: 22px; padding: 12px 14px 16px; }
   .brand h1 { font-size: clamp(28px, 9.2vw, 38px); }
-  .brand-word,
-  .tld { letter-spacing: clamp(9px, 3.1vw, 15px); }
+  .brand h1 { --brand-letter-gap: clamp(7px, 2.45vw, 11px); }
   .pair-crumb { font-size: 22px; letter-spacing: 4px; }
   .grid { min-height: 264px; }
   .emoji-field-shell { width: min(100%, 344px); min-height: 238px; }
