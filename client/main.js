@@ -1007,7 +1007,10 @@
   function clearGracePrompt() {
     clearGraceTimers();
     const modal = $("grace-modal");
-    if (modal) modal.hidden = true;
+    if (modal) {
+      modal.classList.remove("show");
+      modal.hidden = true;
+    }
   }
 
   function graceReasonText(reason) {
@@ -1046,6 +1049,9 @@
     count.textContent = String(left);
     if (text) text.textContent = graceReasonText(pendingReset.reason);
     modal.hidden = false;
+    requestAnimationFrame(() => modal.classList.add("show"));
+    const extend = $("grace-extend");
+    if (extend) requestAnimationFrame(() => extend.focus({ preventScroll: true }));
     graceCountdownInterval = setInterval(() => {
       if (left > 1) {
         left -= 1;

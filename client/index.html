@@ -113,17 +113,6 @@
           <button id="zip-all" class="att-zip" type="button" title="download all attachments as zip" aria-label="download all attachments as zip">zip ↓</button>
         </div>
         <div id="attachments" class="attachments"></div>
-        <div id="grace-modal" class="grace-modal" hidden>
-          <div class="grace-card" role="dialog" aria-live="assertive" aria-labelledby="grace-title">
-            <div id="grace-title" class="grace-title">session ending</div>
-            <div class="grace-count"><span id="grace-count">5</span>s</div>
-            <p id="grace-reason" class="grace-reason">download attachments or copy text</p>
-            <div class="grace-actions">
-              <button id="grace-extend" class="grace-extend" type="button">+10s</button>
-              <button id="grace-end" class="grace-end" type="button">end</button>
-            </div>
-          </div>
-        </div>
         <p class="legal session-legal">P2P</p>
       </section>
 
@@ -146,6 +135,18 @@
           <li>nearby devices can start a quick send flow</li>
           <li>text and files travel P2P; the Worker only signals</li>
         </ul>
+      </div>
+    </div>
+
+    <div id="grace-modal" class="grace-modal" hidden>
+      <div class="grace-card" role="dialog" aria-modal="true" aria-live="assertive" aria-labelledby="grace-title">
+        <div id="grace-title" class="grace-title">session ending</div>
+        <div class="grace-count"><span id="grace-count">5</span>s</div>
+        <p id="grace-reason" class="grace-reason">download attachments or copy text</p>
+        <div class="grace-actions">
+          <button id="grace-extend" class="grace-extend" type="button">+10s</button>
+          <button id="grace-end" class="grace-end" type="button">end</button>
+        </div>
       </div>
     </div>
 

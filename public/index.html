@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#edf7ff" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#070b16" media="(prefers-color-scheme: dark)" />
 <title>wklej.net — ephemeral P2P</title>
-<link rel="stylesheet" href="/044f71bcce.css" />
+<link rel="stylesheet" href="/ca6fdafff2.css" />
 </head>
 <body>
 <div class="aurora" aria-hidden="true"></div>
@@ -105,17 +105,6 @@ aria-label="write text or drop file here - przeciagnij plik lub napisz wiadomoś
 <button id="zip-all" class="att-zip" type="button" title="download all attachments as zip" aria-label="download all attachments as zip">zip ↓</button>
 </div>
 <div id="attachments" class="attachments"></div>
-<div id="grace-modal" class="grace-modal" hidden>
-<div class="grace-card" role="dialog" aria-live="assertive" aria-labelledby="grace-title">
-<div id="grace-title" class="grace-title">session ending</div>
-<div class="grace-count"><span id="grace-count">5</span>s</div>
-<p id="grace-reason" class="grace-reason">download attachments or copy text</p>
-<div class="grace-actions">
-<button id="grace-extend" class="grace-extend" type="button">+10s</button>
-<button id="grace-end" class="grace-end" type="button">end</button>
-</div>
-</div>
-</div>
 <p class="legal session-legal">P2P</p>
 </section>
 <section class="glass card center" data-screen="ended" hidden>
@@ -137,6 +126,17 @@ aria-label="write text or drop file here - przeciagnij plik lub napisz wiadomoś
 </ul>
 </div>
 </div>
+<div id="grace-modal" class="grace-modal" hidden>
+<div class="grace-card" role="dialog" aria-modal="true" aria-live="assertive" aria-labelledby="grace-title">
+<div id="grace-title" class="grace-title">session ending</div>
+<div class="grace-count"><span id="grace-count">5</span>s</div>
+<p id="grace-reason" class="grace-reason">download attachments or copy text</p>
+<div class="grace-actions">
+<button id="grace-extend" class="grace-extend" type="button">+10s</button>
+<button id="grace-end" class="grace-end" type="button">end</button>
+</div>
+</div>
+</div>
 <template id="att-card">
 <div class="att">
 <div class="att-icon">📄</div>
@@ -148,6 +148,6 @@ aria-label="write text or drop file here - przeciagnij plik lub napisz wiadomoś
 <button class="att-action btn icon" type="button"></button>
 </div>
 </template>
-<script src="/d9627985f8.js"></script>
+<script src="/f1beb0d0cf.js"></script>
 </body>
 </html>
