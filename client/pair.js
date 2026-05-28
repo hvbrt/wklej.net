@@ -24,7 +24,7 @@
   const NEARBY_FAST_WINDOW_MS = 30000;
   const MANUAL_HINT_AFTER_MS = 11000;
   const DEVICE_FRESH_MS = 15000;
-  const LEVEL_TRANSITION_DELAY_MS = 220;
+  const LEVEL_TRANSITION_DELAY_MS = 150;
   const NAME_CHECK_DELAY_MS = 360;
   const BUCKET_MS = 60000;
   const ASSET_PRELOAD_BUDGET_MS = 220;
@@ -290,13 +290,17 @@
     }
 
     function spinTransition() {
+      viewport.classList.remove("switch-complete");
       viewport.classList.remove("is-switching");
       void viewport.offsetWidth;
       viewport.classList.add("is-switching");
       clearTimeout(switchTimer);
       switchTimer = window.setTimeout(() => {
-        if (!destroyed) viewport.classList.remove("is-switching");
-      }, 820);
+        if (!destroyed) {
+          viewport.classList.add("switch-complete");
+          viewport.classList.remove("is-switching");
+        }
+      }, 560);
     }
 
     function localY(clientY) {

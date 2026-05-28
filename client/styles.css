@@ -621,8 +621,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   transform: translate3d(-50%,-50%,0) scale(var(--pick-scale,1));
   transform-origin: center;
   transition: transform .16s ease, filter .16s ease, opacity .16s ease;
-  animation: emoji-map-pop .54s cubic-bezier(.16,1,.3,1) both;
-  animation-delay: var(--d);
+  animation: none;
   will-change: auto;
   backface-visibility: hidden;
   -webkit-tap-highlight-color: transparent;
@@ -649,6 +648,9 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
     saturate(1.16)
     contrast(1.08);
   pointer-events: none;
+  animation: emoji-map-pop-content .44s cubic-bezier(.16,1,.3,1) both;
+  animation-delay: var(--d);
+  transform-origin: center;
 }
 .emoji-map-glyph {
   display: grid;
@@ -675,8 +677,18 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   animation: world-strip-switch .54s cubic-bezier(.18,.86,.2,1) both;
 }
 .emoji-map-viewport.is-switching .emoji-map-pick {
-  animation: emoji-map-switch .5s cubic-bezier(.16,1,.3,1) both;
-  animation-delay: calc(42ms + var(--d) * .18);
+  animation: none;
+}
+.emoji-map-viewport.is-switching .emoji-map-pick img,
+.emoji-map-viewport.is-switching .emoji-map-glyph {
+  animation: emoji-map-switch-content .46s cubic-bezier(.16,1,.3,1) both;
+  animation-delay: calc(24ms + var(--d) * .12);
+}
+.emoji-map-viewport.switch-complete .emoji-map-pick img,
+.emoji-map-viewport.switch-complete .emoji-map-glyph {
+  animation: none;
+  opacity: 1;
+  transform: none;
 }
 .grid.grid-loading {
   pointer-events: none;
@@ -689,15 +701,14 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   58% { opacity: 1; background-position: calc(var(--map-bg-x) + 5%) center; transform: translate3d(calc(var(--map-x) - 2%),0,0) scale(1.045) rotate(.05deg); filter: blur(3px) saturate(1.22) contrast(1.06) brightness(1.02); }
   100% { opacity: .98; background-position: var(--map-bg-x) center; transform: translate3d(var(--map-x),0,0) scale(1.04) rotate(0); filter: blur(0) saturate(1.2) contrast(1.06) brightness(1.04); }
 }
-@keyframes emoji-map-pop {
-  0% { opacity: 0; transform: translate3d(-50%,-45%,0) scale(.86); }
-  100% { opacity: 1; transform: translate3d(-50%,-50%,0) scale(var(--pick-scale,1)); }
+@keyframes emoji-map-pop-content {
+  0% { opacity: 0; transform: translate3d(0,7px,0) scale(.88); }
+  100% { opacity: 1; transform: none; }
 }
-@keyframes emoji-map-switch {
-  0% { opacity: 0; transform: translate3d(-38%,-50%,0) scale(.78) rotate(-10deg); filter: blur(8px) saturate(1.16); }
-  58% { opacity: .92; transform: translate3d(-53%,-50%,0) scale(1.06) rotate(-1deg); filter: blur(2px) saturate(1.24); }
-  82% { opacity: 1; transform: translate3d(-49%,-50%,0) scale(1.08) rotate(.5deg); filter: blur(0) saturate(1.13); }
-  100% { opacity: 1; transform: translate3d(-50%,-50%,0) scale(var(--pick-scale,1)); filter: blur(0) saturate(1); }
+@keyframes emoji-map-switch-content {
+  0% { opacity: 0; transform: translate3d(18px,0,0) scale(.78) rotate(-8deg); }
+  55% { opacity: .9; transform: translate3d(-3px,0,0) scale(1.06) rotate(-1deg); }
+  100% { opacity: 1; transform: none; }
 }
 @keyframes emoji-map-miss {
   0%, 100% { transform: translate3d(-50%,-50%,0) scale(var(--pick-scale,1)); }
@@ -711,6 +722,8 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 @media (prefers-reduced-motion: reduce) {
   .emoji-map-track,
   .emoji-map-pick,
+  .emoji-map-pick img,
+  .emoji-map-glyph,
   .grid.grid-enter .emoji-field-shell {
     animation: none;
   }
