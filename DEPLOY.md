@@ -18,7 +18,7 @@ Expected:
 ## Atlas Gate
 
 ```bash
-node -e "const m=require('fs').readFileSync('worker/atlas.ts','utf8');const s=m.indexOf('export const ATLAS');const eq=m.indexOf('=',s);const a=JSON.parse(m.slice(m.indexOf('[',eq),m.lastIndexOf(']')+1));if(a.length!==1024)throw new Error('atlas != 1024');if(typeof a[0].id!=='number'||typeof a[0].symbol!=='string')throw new Error('bad schema');console.log('atlas OK',a.length)"
+node -e "const fs=require('fs');const manifest=JSON.parse(fs.readFileSync('scripts/animated-emoji.json','utf8'));const m=fs.readFileSync('worker/atlas.ts','utf8');const s=m.indexOf('export const ATLAS');const eq=m.indexOf('=',s);const a=JSON.parse(m.slice(m.indexOf('[',eq),m.lastIndexOf(']')+1));if(a.length!==manifest.length)throw new Error('atlas != manifest: '+a.length+' vs '+manifest.length);if(a.length<256)throw new Error('atlas too small: '+a.length);if(typeof a[0].id!=='number'||typeof a[0].symbol!=='string'||typeof a[0].asset!=='string')throw new Error('bad schema');console.log('atlas OK',a.length)"
 ```
 
 If it fails, run:
@@ -67,8 +67,7 @@ curl -sI "$DEPLOY_URL/" | grep -qi '^x-content-type-options: nosniff'
 Manual E2E:
 
 - Open two tabs/devices.
-- On both, drag the same first emoji onto the same grid cell.
-- On both, choose the same next two emoji.
+- On both, tap the same three emoji in the same order.
 - Confirm seed and peer connect automatically after the second device completes the path.
 - Confirm DataChannel text both ways.
 - Confirm files transfer through the connected UI.

@@ -7,6 +7,7 @@ import {
   TREE_DEPTH,
   POS_COUNT,
 } from "./emoji-tree";
+import { ATLAS } from "./atlas";
 import { currentBucket, isUsableBucket, roomKeyForName, roomKeyForSelection } from "./pairing";
 import { sealRoomKey, openRoomKeyToken } from "./room-key";
 import type { FirstMove } from "./room-state";
@@ -22,7 +23,7 @@ function parseIds(raw: string | null): number[] | null {
   const out: number[] = [];
   for (const p of parts) {
     const n = Number(p);
-    if (!Number.isInteger(n) || n < 1 || n > 1024) return null;
+    if (!isValidEmojiId(n)) return null;
     out.push(n);
   }
   return out;
@@ -34,8 +35,12 @@ function parseFirst(raw: string | null): FirstMove | null | undefined {
   if (dot < 0) return undefined;
   const id = Number(raw.slice(0, dot));
   const pos = Number(raw.slice(dot + 1));
-  if (!Number.isInteger(id) || id < 1 || id > 1024 || !isValidPos(pos)) return undefined;
+  if (!isValidEmojiId(id) || !isValidPos(pos)) return undefined;
   return { id, pos };
+}
+
+function isValidEmojiId(id: unknown): id is number {
+  return Number.isInteger(id) && (id as number) >= 1 && (id as number) <= ATLAS.length;
 }
 
 function parseBucket(raw: string | null): number | null | undefined {

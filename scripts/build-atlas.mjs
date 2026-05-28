@@ -6,7 +6,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 const SOURCE = "scripts/animated-emoji.json";
 const ASSET_DIR = "public/emoji";
-const EXPECTED_OPTIONS = 256;
+const MIN_OPTIONS = 256;
 const SKIN_TONE_RE = /[\u{1f3fb}-\u{1f3ff}]/u;
 const ZWJ_RE = /\u200d/u;
 const VARIATION_SELECTOR_RE = /\ufe0f/g;
@@ -17,7 +17,7 @@ function visualKey(symbol) {
 
 const entries = JSON.parse(readFileSync(SOURCE, "utf8"));
 if (!Array.isArray(entries)) throw new Error(`${SOURCE} must contain an array`);
-if (entries.length !== EXPECTED_OPTIONS) throw new Error(`expected ${EXPECTED_OPTIONS} animated emoji, got ${entries.length}`);
+if (entries.length < MIN_OPTIONS) throw new Error(`expected at least ${MIN_OPTIONS} animated emoji, got ${entries.length}`);
 
 const atlas = [];
 const seenSymbols = new Set();

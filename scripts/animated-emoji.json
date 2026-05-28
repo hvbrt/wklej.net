@@ -1022,5 +1022,1365 @@
   {
     "symbol": "🌅",
     "code": "1f305"
+  },
+  {
+    "symbol": "🌄",
+    "code": "1f304"
+  },
+  {
+    "symbol": "🌊",
+    "code": "1f30a"
+  },
+  {
+    "symbol": "🌬️",
+    "code": "1f32c_fe0f"
+  },
+  {
+    "symbol": "❄️",
+    "code": "2744_fe0f"
+  },
+  {
+    "symbol": "🌀",
+    "code": "1f300"
+  },
+  {
+    "symbol": "🌪️",
+    "code": "1f32a_fe0f"
+  },
+  {
+    "symbol": "🌈",
+    "code": "1f308"
+  },
+  {
+    "symbol": "💧",
+    "code": "1f4a7"
+  },
+  {
+    "symbol": "☁️",
+    "code": "2601_fe0f"
+  },
+  {
+    "symbol": "🌧️",
+    "code": "1f327_fe0f"
+  },
+  {
+    "symbol": "🌩️",
+    "code": "1f329_fe0f"
+  },
+  {
+    "symbol": "⛅",
+    "code": "26c5"
+  },
+  {
+    "symbol": "🪐",
+    "code": "1fa90"
+  },
+  {
+    "symbol": "🌍",
+    "code": "1f30d"
+  },
+  {
+    "symbol": "🌎",
+    "code": "1f30e"
+  },
+  {
+    "symbol": "🌏",
+    "code": "1f30f"
+  },
+  {
+    "symbol": "🌌",
+    "code": "1f30c"
+  },
+  {
+    "symbol": "☄️",
+    "code": "2604_fe0f"
+  },
+  {
+    "symbol": "🦁",
+    "code": "1f981"
+  },
+  {
+    "symbol": "🐺",
+    "code": "1f43a"
+  },
+  {
+    "symbol": "🐻",
+    "code": "1f43b"
+  },
+  {
+    "symbol": "🐼",
+    "code": "1f43c"
+  },
+  {
+    "symbol": "🦊",
+    "code": "1f98a"
+  },
+  {
+    "symbol": "🐮",
+    "code": "1f42e"
+  },
+  {
+    "symbol": "🦄",
+    "code": "1f984"
+  },
+  {
+    "symbol": "🦎",
+    "code": "1f98e"
+  },
+  {
+    "symbol": "🐉",
+    "code": "1f409"
+  },
+  {
+    "symbol": "🦖",
+    "code": "1f996"
+  },
+  {
+    "symbol": "🦕",
+    "code": "1f995"
+  },
+  {
+    "symbol": "🍓",
+    "code": "1f353"
+  },
+  {
+    "symbol": "🍒",
+    "code": "1f352"
+  },
+  {
+    "symbol": "🍎",
+    "code": "1f34e"
+  },
+  {
+    "symbol": "🍅",
+    "code": "1f345"
+  },
+  {
+    "symbol": "🍉",
+    "code": "1f349"
+  },
+  {
+    "symbol": "🍊",
+    "code": "1f34a"
+  },
+  {
+    "symbol": "🥕",
+    "code": "1f955"
+  },
+  {
+    "symbol": "🥭",
+    "code": "1f96d"
+  },
+  {
+    "symbol": "🍍",
+    "code": "1f34d"
+  },
+  {
+    "symbol": "🌽",
+    "code": "1f33d"
+  },
+  {
+    "symbol": "🍋",
+    "code": "1f34b"
+  },
+  {
+    "symbol": "🍈",
+    "code": "1f348"
+  },
+  {
+    "symbol": "🍐",
+    "code": "1f350"
+  },
+  {
+    "symbol": "🫛",
+    "code": "1fadb"
+  },
+  {
+    "symbol": "🥬",
+    "code": "1f96c"
+  },
+  {
+    "symbol": "🫑",
+    "code": "1fad1"
+  },
+  {
+    "symbol": "🥝",
+    "code": "1f95d"
+  },
+  {
+    "symbol": "🥑",
+    "code": "1f951"
+  },
+  {
+    "symbol": "🥦",
+    "code": "1f966"
+  },
+  {
+    "symbol": "🥒",
+    "code": "1f952"
+  },
+  {
+    "symbol": "🫐",
+    "code": "1fad0"
+  },
+  {
+    "symbol": "🍇",
+    "code": "1f347"
+  },
+  {
+    "symbol": "🫜",
+    "code": "1fadc"
+  },
+  {
+    "symbol": "🥔",
+    "code": "1f954"
+  },
+  {
+    "symbol": "🧅",
+    "code": "1f9c5"
+  },
+  {
+    "symbol": "🫚",
+    "code": "1fada"
+  },
+  {
+    "symbol": "🧄",
+    "code": "1f9c4"
+  },
+  {
+    "symbol": "🫘",
+    "code": "1fad8"
+  },
+  {
+    "symbol": "🍞",
+    "code": "1f35e"
+  },
+  {
+    "symbol": "🥞",
+    "code": "1f95e"
+  },
+  {
+    "symbol": "🍳",
+    "code": "1f373"
+  },
+  {
+    "symbol": "🧀",
+    "code": "1f9c0"
+  },
+  {
+    "symbol": "🥓",
+    "code": "1f953"
+  },
+  {
+    "symbol": "🍗",
+    "code": "1f357"
+  },
+  {
+    "symbol": "🍔",
+    "code": "1f354"
+  },
+  {
+    "symbol": "🌭",
+    "code": "1f32d"
+  },
+  {
+    "symbol": "🎈",
+    "code": "1f388"
+  },
+  {
+    "symbol": "🎂",
+    "code": "1f382"
+  },
+  {
+    "symbol": "🎁",
+    "code": "1f381"
+  },
+  {
+    "symbol": "🎆",
+    "code": "1f386"
+  },
+  {
+    "symbol": "🪔",
+    "code": "1fa94"
+  },
+  {
+    "symbol": "🪅",
+    "code": "1fa85"
+  },
+  {
+    "symbol": "🪩",
+    "code": "1faa9"
+  },
+  {
+    "symbol": "🥇",
+    "code": "1f947"
+  },
+  {
+    "symbol": "🥈",
+    "code": "1f948"
+  },
+  {
+    "symbol": "🥉",
+    "code": "1f949"
+  },
+  {
+    "symbol": "🏆",
+    "code": "1f3c6"
+  },
+  {
+    "symbol": "⚽",
+    "code": "26bd"
+  },
+  {
+    "symbol": "⚾",
+    "code": "26be"
+  },
+  {
+    "symbol": "🥎",
+    "code": "1f94e"
+  },
+  {
+    "symbol": "🏀",
+    "code": "1f3c0"
+  },
+  {
+    "symbol": "🏉",
+    "code": "1f3c9"
+  },
+  {
+    "symbol": "🎾",
+    "code": "1f3be"
+  },
+  {
+    "symbol": "🏸",
+    "code": "1f3f8"
+  },
+  {
+    "symbol": "🥍",
+    "code": "1f94d"
+  },
+  {
+    "symbol": "🏏",
+    "code": "1f3cf"
+  },
+  {
+    "symbol": "🏑",
+    "code": "1f3d1"
+  },
+  {
+    "symbol": "🏒",
+    "code": "1f3d2"
+  },
+  {
+    "symbol": "🎿",
+    "code": "1f3bf"
+  },
+  {
+    "symbol": "⛸️",
+    "code": "26f8_fe0f"
+  },
+  {
+    "symbol": "🛼",
+    "code": "1f6fc"
+  },
+  {
+    "symbol": "🩰",
+    "code": "1fa70"
+  },
+  {
+    "symbol": "🛹",
+    "code": "1f6f9"
+  },
+  {
+    "symbol": "⛳",
+    "code": "26f3"
+  },
+  {
+    "symbol": "🎯",
+    "code": "1f3af"
+  },
+  {
+    "symbol": "🥏",
+    "code": "1f94f"
+  },
+  {
+    "symbol": "🪃",
+    "code": "1fa83"
+  },
+  {
+    "symbol": "🪁",
+    "code": "1fa81"
+  },
+  {
+    "symbol": "🎣",
+    "code": "1f3a3"
+  },
+  {
+    "symbol": "🥋",
+    "code": "1f94b"
+  },
+  {
+    "symbol": "📟",
+    "code": "1f4df"
+  },
+  {
+    "symbol": "🔌",
+    "code": "1f50c"
+  },
+  {
+    "symbol": "🔋",
+    "code": "1f50b"
+  },
+  {
+    "symbol": "🪫",
+    "code": "1faab"
+  },
+  {
+    "symbol": "💿",
+    "code": "1f4bf"
+  },
+  {
+    "symbol": "💻",
+    "code": "1f4bb"
+  },
+  {
+    "symbol": "🖨️",
+    "code": "1f5a8_fe0f"
+  },
+  {
+    "symbol": "🪎",
+    "code": "1fa8e"
+  },
+  {
+    "symbol": "🪙",
+    "code": "1fa99"
+  },
+  {
+    "symbol": "💎",
+    "code": "1f48e"
+  },
+  {
+    "symbol": "💸",
+    "code": "1f4b8"
+  },
+  {
+    "symbol": "⚖️",
+    "code": "2696_fe0f"
+  },
+  {
+    "symbol": "🛒",
+    "code": "1f6d2"
+  },
+  {
+    "symbol": "💡",
+    "code": "1f4a1"
+  },
+  {
+    "symbol": "🧹",
+    "code": "1f9f9"
+  },
+  {
+    "symbol": "🧦",
+    "code": "1f9e6"
+  },
+  {
+    "symbol": "🎓",
+    "code": "1f393"
+  },
+  {
+    "symbol": "👑",
+    "code": "1f451"
+  },
+  {
+    "symbol": "💍",
+    "code": "1f48d"
+  },
+  {
+    "symbol": "🪭",
+    "code": "1faad"
+  },
+  {
+    "symbol": "☂️",
+    "code": "2602_fe0f"
+  },
+  {
+    "symbol": "👠",
+    "code": "1f460"
+  },
+  {
+    "symbol": "👟",
+    "code": "1f45f"
+  },
+  {
+    "symbol": "🌡️",
+    "code": "1f321_fe0f"
+  },
+  {
+    "symbol": "🩺",
+    "code": "1fa7a"
+  },
+  {
+    "symbol": "🛠️",
+    "code": "1f6e0_fe0f"
+  },
+  {
+    "symbol": "🪏",
+    "code": "1fa8f"
+  },
+  {
+    "symbol": "⚙️",
+    "code": "2699_fe0f"
+  },
+  {
+    "symbol": "⛓️",
+    "code": "26d3_fe0f"
+  },
+  {
+    "symbol": "🖇️",
+    "code": "1f587_fe0f"
+  },
+  {
+    "symbol": "✂️",
+    "code": "2702_fe0f"
+  },
+  {
+    "symbol": "✏️",
+    "code": "270f_fe0f"
+  },
+  {
+    "symbol": "📚",
+    "code": "1f4da"
+  },
+  {
+    "symbol": "📊",
+    "code": "1f4ca"
+  },
+  {
+    "symbol": "📈",
+    "code": "1f4c8"
+  },
+  {
+    "symbol": "📉",
+    "code": "1f4c9"
+  },
+  {
+    "symbol": "🗑️",
+    "code": "1f5d1_fe0f"
+  },
+  {
+    "symbol": "📦",
+    "code": "1f4e6"
+  },
+  {
+    "symbol": "♠️",
+    "code": "2660_fe0f"
+  },
+  {
+    "symbol": "♈",
+    "code": "2648"
+  },
+  {
+    "symbol": "♉",
+    "code": "2649"
+  },
+  {
+    "symbol": "♊",
+    "code": "264a"
+  },
+  {
+    "symbol": "♋",
+    "code": "264b"
+  },
+  {
+    "symbol": "♌",
+    "code": "264c"
+  },
+  {
+    "symbol": "♍",
+    "code": "264d"
+  },
+  {
+    "symbol": "♎",
+    "code": "264e"
+  },
+  {
+    "symbol": "♏",
+    "code": "264f"
+  },
+  {
+    "symbol": "♐",
+    "code": "2650"
+  },
+  {
+    "symbol": "♑",
+    "code": "2651"
+  },
+  {
+    "symbol": "♒",
+    "code": "2652"
+  },
+  {
+    "symbol": "♓",
+    "code": "2653"
+  },
+  {
+    "symbol": "⛎",
+    "code": "26ce"
+  },
+  {
+    "symbol": "🗯️",
+    "code": "1f5ef_fe0f"
+  },
+  {
+    "symbol": "💬",
+    "code": "1f4ac"
+  },
+  {
+    "symbol": "❗",
+    "code": "2757"
+  },
+  {
+    "symbol": "❓",
+    "code": "2753"
+  },
+  {
+    "symbol": "⁉️",
+    "code": "2049_fe0f"
+  },
+  {
+    "symbol": "‼️",
+    "code": "203c_fe0f"
+  },
+  {
+    "symbol": "🛑",
+    "code": "1f6d1"
+  },
+  {
+    "symbol": "🚧",
+    "code": "1f6a7"
+  },
+  {
+    "symbol": "🚨",
+    "code": "1f6a8"
+  },
+  {
+    "symbol": "⛽",
+    "code": "26fd"
+  },
+  {
+    "symbol": "🛟",
+    "code": "1f6df"
+  },
+  {
+    "symbol": "⚓",
+    "code": "2693"
+  },
+  {
+    "symbol": "🚦",
+    "code": "1f6a6"
+  },
+  {
+    "symbol": "🚲",
+    "code": "1f6b2"
+  },
+  {
+    "symbol": "🏍️",
+    "code": "1f3cd_fe0f"
+  },
+  {
+    "symbol": "🚗",
+    "code": "1f697"
+  },
+  {
+    "symbol": "🚚",
+    "code": "1f69a"
+  },
+  {
+    "symbol": "🚜",
+    "code": "1f69c"
+  },
+  {
+    "symbol": "🏎️",
+    "code": "1f3ce_fe0f"
+  },
+  {
+    "symbol": "🚕",
+    "code": "1f695"
+  },
+  {
+    "symbol": "🚌",
+    "code": "1f68c"
+  },
+  {
+    "symbol": "🚂",
+    "code": "1f682"
+  },
+  {
+    "symbol": "⛵",
+    "code": "26f5"
+  },
+  {
+    "symbol": "🛶",
+    "code": "1f6f6"
+  },
+  {
+    "symbol": "🛸",
+    "code": "1f6f8"
+  },
+  {
+    "symbol": "🚀",
+    "code": "1f680"
+  },
+  {
+    "symbol": "✈️",
+    "code": "2708_fe0f"
+  },
+  {
+    "symbol": "🛫",
+    "code": "1f6eb"
+  },
+  {
+    "symbol": "🛬",
+    "code": "1f6ec"
+  },
+  {
+    "symbol": "🎢",
+    "code": "1f3a2"
+  },
+  {
+    "symbol": "🎡",
+    "code": "1f3a1"
+  },
+  {
+    "symbol": "🎠",
+    "code": "1f3a0"
+  },
+  {
+    "symbol": "🗿",
+    "code": "1f5ff"
+  },
+  {
+    "symbol": "🏚️",
+    "code": "1f3da_fe0f"
+  },
+  {
+    "symbol": "🏠",
+    "code": "1f3e0"
+  },
+  {
+    "symbol": "🏕️",
+    "code": "1f3d5_fe0f"
+  },
+  {
+    "symbol": "🌇",
+    "code": "1f307"
+  },
+  {
+    "symbol": "🐢",
+    "code": "1f422"
+  },
+  {
+    "symbol": "🥨",
+    "code": "1f968"
+  },
+  {
+    "symbol": "🎱",
+    "code": "1f3b1"
+  },
+  {
+    "symbol": "🗳️",
+    "code": "1f5f3_fe0f"
+  },
+  {
+    "symbol": "❌",
+    "code": "274c"
+  },
+  {
+    "symbol": "🐊",
+    "code": "1f40a"
+  },
+  {
+    "symbol": "🍕",
+    "code": "1f355"
+  },
+  {
+    "symbol": "🏓",
+    "code": "1f3d3"
+  },
+  {
+    "symbol": "⏰",
+    "code": "23f0"
+  },
+  {
+    "symbol": "🆘",
+    "code": "1f198"
+  },
+  {
+    "symbol": "🐍",
+    "code": "1f40d"
+  },
+  {
+    "symbol": "🌮",
+    "code": "1f32e"
+  },
+  {
+    "symbol": "🎳",
+    "code": "1f3b3"
+  },
+  {
+    "symbol": "⌛",
+    "code": "231b"
+  },
+  {
+    "symbol": "♨️",
+    "code": "2668_fe0f"
+  },
+  {
+    "symbol": "🐸",
+    "code": "1f438"
+  },
+  {
+    "symbol": "🌯",
+    "code": "1f32f"
+  },
+  {
+    "symbol": "♟️",
+    "code": "265f_fe0f"
+  },
+  {
+    "symbol": "⏳",
+    "code": "23f3"
+  },
+  {
+    "symbol": "📴",
+    "code": "1f4f4"
+  },
+  {
+    "symbol": "🐇",
+    "code": "1f407"
+  },
+  {
+    "symbol": "🍝",
+    "code": "1f35d"
+  },
+  {
+    "symbol": "🎲",
+    "code": "1f3b2"
+  },
+  {
+    "symbol": "🛎️",
+    "code": "1f6ce_fe0f"
+  },
+  {
+    "symbol": "☢️",
+    "code": "2622_fe0f"
+  },
+  {
+    "symbol": "🐀",
+    "code": "1f400"
+  },
+  {
+    "symbol": "🥗",
+    "code": "1f957"
+  },
+  {
+    "symbol": "🎰",
+    "code": "1f3b0"
+  },
+  {
+    "symbol": "🔔",
+    "code": "1f514"
+  },
+  {
+    "symbol": "☣️",
+    "code": "2623_fe0f"
+  },
+  {
+    "symbol": "🐩",
+    "code": "1f429"
+  },
+  {
+    "symbol": "🍜",
+    "code": "1f35c"
+  },
+  {
+    "symbol": "🪄",
+    "code": "1fa84"
+  },
+  {
+    "symbol": "📣",
+    "code": "1f4e3"
+  },
+  {
+    "symbol": "⚠️",
+    "code": "26a0_fe0f"
+  },
+  {
+    "symbol": "🐕",
+    "code": "1f415"
+  },
+  {
+    "symbol": "🍢",
+    "code": "1f362"
+  },
+  {
+    "symbol": "📷",
+    "code": "1f4f7"
+  },
+  {
+    "symbol": "🔎",
+    "code": "1f50e"
+  },
+  {
+    "symbol": "✅",
+    "code": "2705"
+  },
+  {
+    "symbol": "🦮",
+    "code": "1f9ae"
+  },
+  {
+    "symbol": "🍡",
+    "code": "1f361"
+  },
+  {
+    "symbol": "📸",
+    "code": "1f4f8"
+  },
+  {
+    "symbol": "🔮",
+    "code": "1f52e"
+  },
+  {
+    "symbol": "🆕",
+    "code": "1f195"
+  },
+  {
+    "symbol": "🐖",
+    "code": "1f416"
+  },
+  {
+    "symbol": "🍨",
+    "code": "1f368"
+  },
+  {
+    "symbol": "🫟",
+    "code": "1fadf"
+  },
+  {
+    "symbol": "💣",
+    "code": "1f4a3"
+  },
+  {
+    "symbol": "🆓",
+    "code": "1f193"
+  },
+  {
+    "symbol": "🐎",
+    "code": "1f40e"
+  },
+  {
+    "symbol": "🍦",
+    "code": "1f366"
+  },
+  {
+    "symbol": "🎷",
+    "code": "1f3b7"
+  },
+  {
+    "symbol": "🪤",
+    "code": "1faa4"
+  },
+  {
+    "symbol": "🆙",
+    "code": "1f199"
+  },
+  {
+    "symbol": "🫏",
+    "code": "1facf"
+  },
+  {
+    "symbol": "🥧",
+    "code": "1f967"
+  },
+  {
+    "symbol": "🎺",
+    "code": "1f3ba"
+  },
+  {
+    "symbol": "🔒",
+    "code": "1f512"
+  },
+  {
+    "symbol": "🆗",
+    "code": "1f197"
+  },
+  {
+    "symbol": "🐂",
+    "code": "1f402"
+  },
+  {
+    "symbol": "🍩",
+    "code": "1f369"
+  },
+  {
+    "symbol": "🪊",
+    "code": "1fa8a"
+  },
+  {
+    "symbol": "🆒",
+    "code": "1f192"
+  },
+  {
+    "symbol": "🐐",
+    "code": "1f410"
+  },
+  {
+    "symbol": "🍪",
+    "code": "1f36a"
+  },
+  {
+    "symbol": "🎸",
+    "code": "1f3b8"
+  },
+  {
+    "symbol": "🚮",
+    "code": "1f6ae"
+  },
+  {
+    "symbol": "🦥",
+    "code": "1f9a5"
+  },
+  {
+    "symbol": "🧂",
+    "code": "1f9c2"
+  },
+  {
+    "symbol": "🪕",
+    "code": "1fa95"
+  },
+  {
+    "symbol": "☮️",
+    "code": "262e_fe0f"
+  },
+  {
+    "symbol": "🦘",
+    "code": "1f998"
+  },
+  {
+    "symbol": "🍿",
+    "code": "1f37f"
+  },
+  {
+    "symbol": "🎻",
+    "code": "1f3bb"
+  },
+  {
+    "symbol": "☯️",
+    "code": "262f_fe0f"
+  },
+  {
+    "symbol": "🐅",
+    "code": "1f405"
+  },
+  {
+    "symbol": "🧋",
+    "code": "1f9cb"
+  },
+  {
+    "symbol": "🪉",
+    "code": "1fa89"
+  },
+  {
+    "symbol": "♾️",
+    "code": "267e_fe0f"
+  },
+  {
+    "symbol": "🐒",
+    "code": "1f412"
+  },
+  {
+    "symbol": "🧃",
+    "code": "1f9c3"
+  },
+  {
+    "symbol": "🥁",
+    "code": "1f941"
+  },
+  {
+    "symbol": "🎶",
+    "code": "1f3b6"
+  },
+  {
+    "symbol": "🦍",
+    "code": "1f98d"
+  },
+  {
+    "symbol": "🍼",
+    "code": "1f37c"
+  },
+  {
+    "symbol": "🪇",
+    "code": "1fa87"
+  },
+  {
+    "symbol": "➕",
+    "code": "2795"
+  },
+  {
+    "symbol": "🦧",
+    "code": "1f9a7"
+  },
+  {
+    "symbol": "🍵",
+    "code": "1f375"
+  },
+  {
+    "symbol": "📺",
+    "code": "1f4fa"
+  },
+  {
+    "symbol": "🐿️",
+    "code": "1f43f_fe0f"
+  },
+  {
+    "symbol": "☕",
+    "code": "2615"
+  },
+  {
+    "symbol": "🎞️",
+    "code": "1f39e_fe0f"
+  },
+  {
+    "symbol": "🦝",
+    "code": "1f99d"
+  },
+  {
+    "symbol": "🫖",
+    "code": "1fad6"
+  },
+  {
+    "symbol": "🎬",
+    "code": "1f3ac"
+  },
+  {
+    "symbol": "™️",
+    "code": "2122_fe0f"
+  },
+  {
+    "symbol": "🦔",
+    "code": "1f994"
+  },
+  {
+    "symbol": "🧉",
+    "code": "1f9c9"
+  },
+  {
+    "symbol": "🎭",
+    "code": "1f3ad"
+  },
+  {
+    "symbol": "🦦",
+    "code": "1f9a6"
+  },
+  {
+    "symbol": "🍻",
+    "code": "1f37b"
+  },
+  {
+    "symbol": "🎟️",
+    "code": "1f39f_fe0f"
+  },
+  {
+    "symbol": "🦇",
+    "code": "1f987"
+  },
+  {
+    "symbol": "🥂",
+    "code": "1f942"
+  },
+  {
+    "symbol": "🐦",
+    "code": "1f426"
+  },
+  {
+    "symbol": "🍾",
+    "code": "1f37e"
+  },
+  {
+    "symbol": "🐓",
+    "code": "1f413"
+  },
+  {
+    "symbol": "🍷",
+    "code": "1f377"
+  },
+  {
+    "symbol": "🐣",
+    "code": "1f423"
+  },
+  {
+    "symbol": "🫗",
+    "code": "1fad7"
+  },
+  {
+    "symbol": "🐤",
+    "code": "1f424"
+  },
+  {
+    "symbol": "🍹",
+    "code": "1f379"
+  },
+  {
+    "symbol": "🐥",
+    "code": "1f425"
+  },
+  {
+    "symbol": "🥢",
+    "code": "1f962"
+  },
+  {
+    "symbol": "🦅",
+    "code": "1f985"
+  },
+  {
+    "symbol": "🍽️",
+    "code": "1f37d_fe0f"
+  },
+  {
+    "symbol": "🦉",
+    "code": "1f989"
+  },
+  {
+    "symbol": "🕊️",
+    "code": "1f54a_fe0f"
+  },
+  {
+    "symbol": "🪿",
+    "code": "1fabf"
+  },
+  {
+    "symbol": "🦩",
+    "code": "1f9a9"
+  },
+  {
+    "symbol": "🦚",
+    "code": "1f99a"
+  },
+  {
+    "symbol": "🐧",
+    "code": "1f427"
+  },
+  {
+    "symbol": "🦭",
+    "code": "1f9ad"
+  },
+  {
+    "symbol": "🦈",
+    "code": "1f988"
+  },
+  {
+    "symbol": "🫍",
+    "code": "1facd"
+  },
+  {
+    "symbol": "🐬",
+    "code": "1f42c"
+  },
+  {
+    "symbol": "🐳",
+    "code": "1f433"
+  },
+  {
+    "symbol": "🐟",
+    "code": "1f41f"
+  },
+  {
+    "symbol": "🐡",
+    "code": "1f421"
+  },
+  {
+    "symbol": "🦞",
+    "code": "1f99e"
+  },
+  {
+    "symbol": "🦀",
+    "code": "1f980"
+  },
+  {
+    "symbol": "🐙",
+    "code": "1f419"
+  },
+  {
+    "symbol": "🪼",
+    "code": "1fabc"
+  },
+  {
+    "symbol": "🫧",
+    "code": "1fae7"
+  },
+  {
+    "symbol": "🦂",
+    "code": "1f982"
+  },
+  {
+    "symbol": "🕷️",
+    "code": "1f577_fe0f"
+  },
+  {
+    "symbol": "🐌",
+    "code": "1f40c"
+  },
+  {
+    "symbol": "🐜",
+    "code": "1f41c"
+  },
+  {
+    "symbol": "🦗",
+    "code": "1f997"
+  },
+  {
+    "symbol": "🦟",
+    "code": "1f99f"
+  },
+  {
+    "symbol": "🪳",
+    "code": "1fab3"
+  },
+  {
+    "symbol": "🪰",
+    "code": "1fab0"
+  },
+  {
+    "symbol": "🐝",
+    "code": "1f41d"
+  },
+  {
+    "symbol": "🐞",
+    "code": "1f41e"
+  },
+  {
+    "symbol": "🦋",
+    "code": "1f98b"
+  },
+  {
+    "symbol": "🐛",
+    "code": "1f41b"
+  },
+  {
+    "symbol": "🪱",
+    "code": "1fab1"
+  },
+  {
+    "symbol": "🐾",
+    "code": "1f43e"
+  },
+  {
+    "symbol": "©️",
+    "code": "00a9_fe0f"
+  },
+  {
+    "symbol": "®️",
+    "code": "00ae_fe0f"
   }
 ]

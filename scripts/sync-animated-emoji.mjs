@@ -68,12 +68,11 @@ function evenOffset(value) {
   return Math.max(0, Math.round(value / 2) * 2);
 }
 
-function isCurrentAsset(file) {
+function isUsableCachedAsset(file) {
   if (!existsSync(file) || statSync(file).size < MIN_BYTES) return false;
   try {
     const info = parseInfo(execFileSync("webpmux", ["-info", file], { encoding: "utf8" }));
-    const maxCanvas = Math.max(info.canvasWidth, info.canvasHeight);
-    return maxCanvas <= TARGET_SIZE && maxCanvas >= TARGET_SIZE * 0.62 && info.frames.length <= MAX_FRAMES;
+    return info.canvasWidth > 0 && info.canvasHeight > 0 && info.frames.length > 0;
   } catch {
     return false;
   }
@@ -125,7 +124,7 @@ async function processEntry(entry) {
   if (!/^[0-9a-f]+(?:_[0-9a-f]+)*$/.test(code)) throw new Error(`bad animated emoji code for ${symbol}: ${code}`);
 
   const file = `${OUT_DIR}/${code}.webp`;
-  if (isCurrentAsset(file)) return { cached: true, size: statSync(file).size };
+  if (isUsableCachedAsset(file)) return { cached: true, size: statSync(file).size };
 
   const temp = await mkdtemp(join(tmpdir(), "wklej-emoji-src-"));
   const original = join(temp, `${code}-512.webp`);
