@@ -987,7 +987,7 @@
     try {
       const url = new URL(location.href);
       url.hash = "";
-      for (const key of ["shortcut", "intent", "mode", "action", "room", "name", "r", "callback", "cb", "text", "message", "body", "file", "fileB64", "b64", "data", "filename", "fileName", "mime", "type"]) {
+      for (const key of ["shortcut", "intent", "mode", "action", "room", "name", "r", "callback", "cb", "text", "message", "body", "file", "fileB64", "b64", "data", "filename", "fileName", "mime", "type", "localHandoff", "local-handoff"]) {
         url.searchParams.delete(key);
       }
       history.replaceState(null, "", `${url.pathname}${url.search}`);

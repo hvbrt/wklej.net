@@ -103,10 +103,10 @@ This repo installs two local helper apps in `~/Applications`:
 The macOS share helper does not put the whole file into the URL. It starts a temporary localhost server on `127.0.0.1`, opens:
 
 ```text
-https://wklej.net/#shortcut=create&room=ROOM&handoff=TOKEN&handoffUrl=http://127.0.0.1:PORT/TOKEN
+https://wklej.net/?localHandoff=1#shortcut=create&room=ROOM&handoff=TOKEN&handoffUrl=http://127.0.0.1:PORT/TOKEN
 ```
 
-Then the browser fetches the file from localhost with the one-time token. The file still does not go to the Worker or Durable Object; it waits locally and sends only after E2EE/DataChannel is ready.
+Then the browser fetches the file from localhost with the one-time token. The `localHandoff=1` query flag only enables the localhost CSP exception for this launch; the token and handoff URL stay in the fragment and are not sent to the Worker. The file still does not go to the Worker or Durable Object; it waits locally and sends only after E2EE/DataChannel is ready.
 
 Recreate helpers:
 

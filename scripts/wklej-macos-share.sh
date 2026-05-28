@@ -122,7 +122,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 handoff_url = f"http://127.0.0.1:{port}/{token}"
 target = (
     app_url.rstrip("/")
-    + "/#shortcut=create"
+    + "/?localHandoff=1#shortcut=create"
     + "&room=" + urllib.parse.quote(room)
     + "&handoff=" + urllib.parse.quote(token)
     + "&handoffUrl=" + urllib.parse.quote(handoff_url, safe="")

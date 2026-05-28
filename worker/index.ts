@@ -361,6 +361,11 @@ function parseIceMode(value: string | null): IceMode {
   return value === "relay" ? "relay" : "direct";
 }
 
+function allowsLocalHandoff(url: URL): boolean {
+  const isAppShell = url.pathname === "/" || url.pathname === "/index.html";
+  return isAppShell && (url.searchParams.get("localHandoff") === "1" || url.searchParams.get("local-handoff") === "1");
+}
+
 function withSecurityHeaders(req: Request, res: Response): Response {
   const init = withSecurityHeadersInit(req, {
     status: res.status,
@@ -373,6 +378,8 @@ function withSecurityHeaders(req: Request, res: Response): Response {
 function withSecurityHeadersInit(req: Request, init: ResponseInit): ResponseInit {
   const url = new URL(req.url);
   const headers = new Headers(init.headers);
+  const connectSrc = ["'self'", "wss:", "https://rtc.live.cloudflare.com", "stun:", "turn:", "turns:"];
+  if (allowsLocalHandoff(url)) connectSrc.splice(1, 0, "http://127.0.0.1:*");
 
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("X-DNS-Prefetch-Control", "off");
@@ -397,7 +404,7 @@ function withSecurityHeadersInit(req: Request, init: ResponseInit): ResponseInit
       "style-src 'self'",
       "font-src 'self'",
       "img-src 'self' data: blob:",
-      "connect-src 'self' http://127.0.0.1:* wss: https://rtc.live.cloudflare.com stun: turn: turns:",
+      `connect-src ${connectSrc.join(" ")}`,
       "media-src 'none'",
       "object-src 'none'",
       "worker-src 'self'",
