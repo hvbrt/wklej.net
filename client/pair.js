@@ -504,7 +504,7 @@
     } else if (manualFallback) {
       nearbyText.textContent = "manual ready";
     } else {
-      nearbyText.textContent = count > 0 ? `nearby: ${count} ${deviceWord(count)}` : "nearby";
+      nearbyText.textContent = count > 0 ? `${count} ${deviceWord(count)} found ready to connect` : "nearby";
     }
 
     renderNearbyDevices(devices);

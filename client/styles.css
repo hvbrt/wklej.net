@@ -852,6 +852,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   font-size: 17px;
   font-weight: 800;
   letter-spacing: .02em;
+  text-align: center;
 }
 .info-list {
   display: grid;
