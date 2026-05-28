@@ -87,6 +87,11 @@
         <header class="conn-head">
           <span id="health" class="badge ok">connected</span>
           <span id="transport" class="badge transport pending">…</span>
+          <span id="session-dots" class="session-dots" aria-label="private session colour check" title="compare these dots on both devices" hidden>
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
           <span class="grow"></span>
           <span class="cd small" id="conn-cd-wrap"><span id="cd-conn">120</span>s</span>
         </header>
@@ -104,11 +109,6 @@
             aria-label="write text or drop file here - przeciagnij plik lub napisz wiadomość"
           ></textarea>
           <div id="editor-placeholder" class="editor-placeholder" aria-hidden="true"></div>
-          <div id="session-dots" class="session-dots" aria-label="private session colour check" title="compare these dots on both devices" hidden>
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
           <div class="editor-bar">
             <button id="attach" class="btn icon attach-pulse" type="button" title="attach file" aria-label="attach file">📎</button>
             <input id="file-input" type="file" multiple hidden />
