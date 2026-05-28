@@ -1583,8 +1583,8 @@
     installShortcutWatcher();
     const launch = shortcutLaunchFromUrl();
     if (startShortcutAttach(launch) || startShortcutLaunch(launch)) return;
-    startNearby();
     renderPalette();
+    setTimeout(startNearby, 900);
   }
 
   function showGridError(text) {

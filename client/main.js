@@ -30,6 +30,9 @@
     appPath: currentScriptPath,
     cssPath: stylesheetPath,
   };
+  let buildReady = null;
+  let buildVerified = false;
+  let buildFailed = false;
 
   function setBuildStatus(text, cls) {
     const line = document.querySelector(".build-line");
@@ -124,6 +127,7 @@
   }
 
   function blockUnverifiedBuild() {
+    buildFailed = true;
     setBuildStatus("build blocked", "bad");
     document.querySelectorAll(".pair-action").forEach((btn) => {
       btn.disabled = true;
@@ -132,6 +136,17 @@
     if (grid) {
       grid.textContent = "build verification failed";
       grid.classList.add("grid-loading");
+    }
+  }
+
+  async function requireVerifiedBuild() {
+    if (buildVerified) return true;
+    if (buildFailed) return false;
+    try {
+      await buildReady;
+      return buildVerified;
+    } catch {
+      return false;
     }
   }
 
@@ -372,6 +387,7 @@
     show("pairing");
     countdown("cd-pair", 120, () => hardReset("expired", false));
     window.__P.begin(async (selection, label, meta) => {
+      if (!(await requireVerifiedBuild())) return;
       state.selection = selection;
       state.label = label;
       state.nearbySend = !!(meta && meta.nearbySend);
@@ -1872,5 +1888,14 @@
   window.addEventListener("wklej-shortcut-payload", onShortcutPayloadEvent);
   installShortcutPayloadBridge();
   autosize();
-  verifyBuildSurface().then(beginPairing).catch(blockUnverifiedBuild);
+  buildReady = verifyBuildSurface()
+    .then(() => {
+      buildVerified = true;
+      return true;
+    })
+    .catch((err) => {
+      blockUnverifiedBuild();
+      throw err;
+    });
+  beginPairing();
 })();
