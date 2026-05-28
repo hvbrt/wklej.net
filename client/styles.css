@@ -54,6 +54,7 @@
   --lockup-width: 184px;
   --lockup-gap: 22px;
   --pair-field-width: 414px;
+  --brand-side-width: 88%;
   --logo-dot-size: 16px;
   --emoji-tile:
     radial-gradient(circle at 36% 20%, rgba(255,255,255,.38), transparent 34%),
@@ -314,7 +315,9 @@ body {
   font-variant-ligatures: none;
 }
 .brand-word { justify-self: end; text-align: right; }
-.tld { width: 86%; justify-self: start; text-align: left; }
+.brand-word,
+.tld { width: var(--brand-side-width); }
+.tld { justify-self: start; text-align: left; }
 .brand-word > span,
 .tld > span {
   display: inline-block;
