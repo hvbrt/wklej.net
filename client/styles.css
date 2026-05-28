@@ -549,8 +549,10 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   box-shadow:
     0 22px 58px -44px rgba(20,24,43,.60),
     0 0 44px -28px rgba(65,169,255,.42);
-  --map-x: -8%;
-  --map-enter-x: -34%;
+  --map-x: -6%;
+  --map-enter-x: -15%;
+  --map-bg-x: 0%;
+  --map-enter-bg-x: -26%;
   transform: translateZ(0);
 }
 .emoji-map-viewport::before,
@@ -563,9 +565,9 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 }
 .emoji-map-viewport::before {
   background:
-    linear-gradient(90deg, rgba(237,247,255,.16), transparent 10%, transparent 90%, rgba(237,247,255,.12)),
-    radial-gradient(circle at 55% 30%, rgba(255,255,255,.13), transparent 34%);
-  opacity: .28;
+    linear-gradient(90deg, rgba(237,247,255,.07), transparent 12%, transparent 88%, rgba(237,247,255,.06)),
+    radial-gradient(circle at 55% 30%, rgba(255,255,255,.08), transparent 34%);
+  opacity: .18;
 }
 .emoji-map-viewport::after {
   inset: -8px;
@@ -580,6 +582,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   border-radius: 28px;
   background-image: url("{{WORLD_STRIP}}");
   background-repeat: repeat-x;
+  background-position: var(--map-bg-x) center;
   background-size: auto 100%;
   filter: saturate(1.2) contrast(1.06) brightness(1.04);
   opacity: .98;
@@ -594,9 +597,9 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   z-index: 2;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(255,255,255,.08), transparent 22%, transparent 76%, rgba(0,22,75,.08)),
-    radial-gradient(circle at 52% 28%, rgba(255,255,255,.09), transparent 36%);
-  opacity: .52;
+    linear-gradient(180deg, rgba(255,255,255,.045), transparent 24%, transparent 76%, rgba(0,22,75,.08)),
+    radial-gradient(circle at 52% 28%, rgba(255,255,255,.055), transparent 36%);
+  opacity: .38;
 }
 .emoji-map-picks {
   position: absolute;
@@ -665,9 +668,10 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 .emoji-map-pick.miss {
   animation: emoji-map-miss .36s ease both;
 }
-.emoji-map-viewport.is-switching::before { opacity: .12; }
+.emoji-map-viewport.is-switching::before { opacity: 0; }
+.emoji-map-viewport.is-switching .emoji-map-shimmer { opacity: .24; }
 .emoji-map-viewport.is-switching .emoji-map-track {
-  will-change: transform, filter, opacity;
+  will-change: transform, filter, opacity, background-position;
   animation: world-strip-switch .54s cubic-bezier(.18,.86,.2,1) both;
 }
 .emoji-map-viewport.is-switching .emoji-map-pick {
@@ -681,9 +685,9 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   animation: emoji-field-in .42s cubic-bezier(.16,1,.3,1) both;
 }
 @keyframes world-strip-switch {
-  0% { opacity: .76; transform: translate3d(var(--map-enter-x),0,0) scale(1.075) rotate(.35deg); filter: blur(11px) saturate(1.34) contrast(1.08) brightness(1.06); }
-  58% { opacity: 1; transform: translate3d(calc(var(--map-x) - 6%),0,0) scale(1.052) rotate(.08deg); filter: blur(4px) saturate(1.28) contrast(1.07) brightness(1.05); }
-  100% { opacity: .98; transform: translate3d(var(--map-x),0,0) scale(1.04) rotate(0); filter: blur(0) saturate(1.2) contrast(1.06) brightness(1.04); }
+  0% { opacity: .9; background-position: var(--map-enter-bg-x) center; transform: translate3d(var(--map-enter-x),0,0) scale(1.055) rotate(.22deg); filter: blur(8px) saturate(1.28) contrast(1.06) brightness(1.01); }
+  58% { opacity: 1; background-position: calc(var(--map-bg-x) + 5%) center; transform: translate3d(calc(var(--map-x) - 2%),0,0) scale(1.045) rotate(.05deg); filter: blur(3px) saturate(1.22) contrast(1.06) brightness(1.02); }
+  100% { opacity: .98; background-position: var(--map-bg-x) center; transform: translate3d(var(--map-x),0,0) scale(1.04) rotate(0); filter: blur(0) saturate(1.2) contrast(1.06) brightness(1.04); }
 }
 @keyframes emoji-map-pop {
   0% { opacity: 0; transform: translate3d(-50%,-45%,0) scale(.86); }
@@ -701,7 +705,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   75% { transform: translate3d(-42%,-50%,0) scale(1.05); }
 }
 @keyframes emoji-field-in {
-  0% { opacity: .2; transform: translateY(8px) scale(.99); }
+  0% { opacity: .88; transform: translateY(5px) scale(.995); }
   100% { opacity: 1; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
