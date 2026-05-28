@@ -197,6 +197,9 @@
 
     const viewport = document.createElement("div");
     viewport.className = "emoji-map-viewport";
+    const mapX = -8 - level * 19;
+    viewport.style.setProperty("--map-x", `${mapX}%`);
+    viewport.style.setProperty("--map-enter-x", `${mapX - 28}%`);
     viewport.setAttribute("aria-label", moveMode ? "emoji pairing map" : "choose next emoji");
     viewport.setAttribute("role", "group");
 
