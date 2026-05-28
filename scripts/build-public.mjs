@@ -14,13 +14,16 @@ const fontFiles = {
   "{{FONT_SORA_LATIN}}": "client/fonts/sora-latin.woff2",
   "{{FONT_SORA_LATIN_EXT}}": "client/fonts/sora-latin-ext.woff2",
 };
+const staticAssets = {
+  "{{WORLD_STRIP}}": "client/world-strip.webp",
+};
 
 if (!existsSync(PUB)) mkdirSync(PUB);
 
 // Clean generated/static public surface from older builds (keep no readable JS/CSS
 // names and do not expose the emoji atlas as a downloadable asset).
 for (const f of readdirSync(PUB)) {
-  if (/\.(js|css|html|woff2)$/.test(f) || f === "emoji-atlas.json") unlinkSync(`${PUB}/${f}`);
+  if (/\.(js|css|html|woff2|webp)$/.test(f) || f === "emoji-atlas.json") unlinkSync(`${PUB}/${f}`);
 }
 
 // 1) Fonts — copy self-hosted WOFF2 files with content hashes.
@@ -32,6 +35,17 @@ for (const [placeholder, src] of Object.entries(fontFiles)) {
   writeFileSync(`${PUB}/${name}`, font);
   cssSrc = cssSrc.replaceAll(placeholder, "/" + name);
   fontNames.push(name);
+}
+
+// Static UI images — content-hashed so long cache lifetimes stay safe.
+const assetNames = [];
+for (const [placeholder, src] of Object.entries(staticAssets)) {
+  const asset = readFileSync(src);
+  const ext = src.slice(src.lastIndexOf("."));
+  const name = `${hash(asset)}${ext}`;
+  writeFileSync(`${PUB}/${name}`, asset);
+  cssSrc = cssSrc.replaceAll(placeholder, "/" + name);
+  assetNames.push(name);
 }
 
 // 2) CSS — minify.
@@ -55,4 +69,4 @@ let html = readFileSync("client/index.html", "utf8")
   .trim();
 writeFileSync(`${PUB}/index.html`, html);
 
-console.log(`built: ${cssName}, ${appName}, ${fontNames.join(", ")}, index.html`);
+console.log(`built: ${cssName}, ${appName}, ${fontNames.join(", ")}, ${assetNames.join(", ")}, index.html`);

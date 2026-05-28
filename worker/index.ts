@@ -296,7 +296,7 @@ function withSecurityHeadersInit(req: Request, init: ResponseInit): ResponseInit
   } else if (
     (init.status ?? 200) >= 200 &&
     (init.status ?? 200) < 300 &&
-    (/^\/[0-9a-f]{10}\.(?:js|css)$/.test(url.pathname) || /^\/emoji\/[0-9a-f_]+\.webp$/.test(url.pathname))
+    (/^\/[0-9a-f]{10}\.(?:js|css|webp)$/.test(url.pathname) || /^\/emoji\/[0-9a-f_]+\.webp$/.test(url.pathname))
   ) {
     headers.set("Cache-Control", "public, max-age=31536000, immutable");
   } else if (url.pathname === "/" || url.pathname === "/index.html") {

@@ -13,9 +13,9 @@ import { pipeline } from "node:stream/promises";
 const SOURCE = "scripts/animated-emoji.json";
 const OUT_DIR = "public/emoji";
 const BASE = "https://fonts.gstatic.com/s/e/notoemoji/latest";
-const TARGET_SIZE = Number(process.env.ANIMATED_EMOJI_SIZE || 112);
-const QUALITY = Number(process.env.ANIMATED_EMOJI_QUALITY || 46);
-const MAX_FRAMES = Number(process.env.ANIMATED_EMOJI_MAX_FRAMES || 12);
+const TARGET_SIZE = Number(process.env.ANIMATED_EMOJI_SIZE || 88);
+const QUALITY = Number(process.env.ANIMATED_EMOJI_QUALITY || 44);
+const MAX_FRAMES = Number(process.env.ANIMATED_EMOJI_MAX_FRAMES || 18);
 const CONCURRENCY = Number(process.env.ANIMATED_EMOJI_CONCURRENCY || 4);
 const MIN_BYTES = 2048;
 
@@ -68,6 +68,17 @@ function evenOffset(value) {
   return Math.max(0, Math.round(value / 2) * 2);
 }
 
+function isCurrentAsset(file) {
+  if (!existsSync(file) || statSync(file).size < MIN_BYTES) return false;
+  try {
+    const info = parseInfo(execFileSync("webpmux", ["-info", file], { encoding: "utf8" }));
+    const maxCanvas = Math.max(info.canvasWidth, info.canvasHeight);
+    return maxCanvas <= TARGET_SIZE && maxCanvas >= TARGET_SIZE * 0.62 && info.frames.length <= MAX_FRAMES;
+  } catch {
+    return false;
+  }
+}
+
 async function download(url, out) {
   const res = await fetch(url);
   if (!res.ok || !res.body) throw new Error(`download failed: ${res.status} ${url}`);
@@ -114,7 +125,7 @@ async function processEntry(entry) {
   if (!/^[0-9a-f]+(?:_[0-9a-f]+)*$/.test(code)) throw new Error(`bad animated emoji code for ${symbol}: ${code}`);
 
   const file = `${OUT_DIR}/${code}.webp`;
-  if (existsSync(file) && statSync(file).size >= MIN_BYTES) return { cached: true, size: statSync(file).size };
+  if (isCurrentAsset(file)) return { cached: true, size: statSync(file).size };
 
   const temp = await mkdtemp(join(tmpdir(), "wklej-emoji-src-"));
   const original = join(temp, `${code}-512.webp`);
