@@ -314,7 +314,7 @@ body {
   font-variant-ligatures: none;
 }
 .brand-word { justify-self: end; text-align: right; }
-.tld { justify-self: start; text-align: left; }
+.tld { width: 86%; justify-self: start; text-align: left; }
 .brand-word > span,
 .tld > span {
   display: inline-block;
