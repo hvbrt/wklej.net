@@ -163,12 +163,14 @@ async function activeNamedRoom(
   deps: PairingDeps,
   bucket: number,
 ): Promise<{ bucket: number; roomKey: string } | null> {
-  for (const candidate of [bucket, bucket - 1]) {
-    if (!isUsableBucket(candidate)) continue;
-    const roomKey = await roomKeyForName(candidate, name, deps.pepper);
-    if (await deps.isRoomActive(roomKey)) return { bucket: candidate, roomKey };
-  }
-  return null;
+  const checks = [bucket, bucket - 1]
+    .filter((candidate) => isUsableBucket(candidate))
+    .map(async (candidate) => {
+      const roomKey = await roomKeyForName(candidate, name, deps.pepper);
+      return (await deps.isRoomActive(roomKey)) ? { bucket: candidate, roomKey } : null;
+    });
+  const results = await Promise.all(checks);
+  return results.find((result): result is { bucket: number; roomKey: string } => result !== null) ?? null;
 }
 
 function normalizeRoomName(raw: string): string {

@@ -8,7 +8,7 @@
   const CHUNK_SIZE = 16 * 1024; // 16 KiB — safe across browsers incl. iOS Safari
   const BUFFER_HIGH = 8 * 1024 * 1024; // pause sending above 8 MiB buffered
   const BUFFER_LOW = 256 * 1024; // resume when drained below 256 KiB
-  const AUTO_FALLBACK_MS = 2600;
+  const AUTO_FALLBACK_MS = 2000;
   const E2EE_MAGIC = 0xe2;
   const E2EE_JSON = 1;
   const E2EE_BINARY = 2;
@@ -37,6 +37,14 @@
   // Auto starts with direct STUN/P2P. Relay credentials are warmed in the
   // background, so fallback does not pay a TURN minting round-trip later.
   async function fetchIceConfig(mode) {
+    if (mode === "direct") {
+      return {
+        ...STUN_FALLBACK,
+        iceCandidatePoolSize: 1,
+        bundlePolicy: "max-bundle",
+        rtcpMuxPolicy: "require",
+      };
+    }
     try {
       const r = await fetch(`/api/ice?mode=${mode}`);
       if (!r.ok) {
@@ -53,7 +61,7 @@
         return {
           iceServers: d.iceServers,
           iceTransportPolicy: mode === "relay" && hasTurn ? "relay" : "all",
-          iceCandidatePoolSize: 0,
+          iceCandidatePoolSize: mode === "relay" ? 1 : 0,
           bundlePolicy: "max-bundle",
           rtcpMuxPolicy: "require",
         };

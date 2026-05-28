@@ -63,7 +63,7 @@
     const name = String(path || "").replace(/^\//, "");
     const expected = manifest.assets[name];
     if (!expected || !expected.sha256) throw new Error(`missing manifest asset: ${name}`);
-    const res = await fetch(path, { cache: "no-cache" });
+    const res = await fetch(path, { cache: "force-cache" });
     if (!res.ok) throw new Error(`asset unavailable: ${name}`);
     const actual = await sha256Hex(await res.arrayBuffer());
     if (actual !== expected.sha256) throw new Error(`asset hash mismatch: ${name}`);
@@ -437,7 +437,7 @@
   async function waitForNamedRoom(selection) {
     setLoading("waiting");
     let last = { ok: false, reason: "no-room" };
-    const waits = [220, 280, 360, 500, 700, 900, 1200];
+    const waits = [0, 120, 180, 260, 400, 650, 1000];
     for (let i = 0; i < waits.length; i++) {
       await new Promise((resolve) => setTimeout(resolve, waits[i]));
       try {
