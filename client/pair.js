@@ -19,9 +19,11 @@
   const roomNameOpen = document.getElementById("room-name-open");
   const ROOM_SWIPE_MIN_RATIO = 0.58;
   const ROOM_SWIPE_CENTER_RATIO = 0.34;
-  const NEARBY_FAST_INTERVAL_MS = 1000;
-  const NEARBY_IDLE_INTERVAL_MS = 8000;
-  const NEARBY_FAST_WINDOW_MS = 30000;
+  const NEARBY_START_INTERVAL_MS = 3000;
+  const NEARBY_ACTIVE_INTERVAL_MS = 12000;
+  const NEARBY_IDLE_INTERVAL_MS = 30000;
+  const NEARBY_START_WINDOW_MS = 12000;
+  const NEARBY_ACTIVE_WINDOW_MS = 60000;
   const MANUAL_HINT_AFTER_MS = 11000;
   const DEVICE_FRESH_MS = 15000;
   const LEVEL_TRANSITION_DELAY_MS = 150;
@@ -525,9 +527,11 @@
 
   function nearbyPollDelay() {
     const now = Date.now();
-    const startedRecently = nearbyStartedAt && now - nearbyStartedAt < NEARBY_FAST_WINDOW_MS;
-    const activeRecently = nearbyLastActiveAt && now - nearbyLastActiveAt < NEARBY_FAST_WINDOW_MS;
-    return startedRecently || activeRecently ? NEARBY_FAST_INTERVAL_MS : NEARBY_IDLE_INTERVAL_MS;
+    const startedRecently = nearbyStartedAt && now - nearbyStartedAt < NEARBY_START_WINDOW_MS;
+    const activeRecently = nearbyLastActiveAt && now - nearbyLastActiveAt < NEARBY_ACTIVE_WINDOW_MS;
+    if (startedRecently) return NEARBY_START_INTERVAL_MS;
+    if (activeRecently) return NEARBY_ACTIVE_INTERVAL_MS;
+    return NEARBY_IDLE_INTERVAL_MS;
   }
 
   function scheduleNearbyPoll(delay) {
@@ -1288,8 +1292,8 @@
     nearbyStartedAt = Date.now();
     nearbyLastActiveAt = 0;
     pollNearby(true);
-    nearbyKickTimer = setTimeout(() => pollNearby(true), 350);
-    scheduleNearbyPoll(NEARBY_FAST_INTERVAL_MS);
+    nearbyKickTimer = setTimeout(() => pollNearby(true), 1500);
+    scheduleNearbyPoll(NEARBY_START_INTERVAL_MS);
   }
 
   function stopNearby(notify) {

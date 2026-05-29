@@ -6,8 +6,9 @@
 (function () {
   const STUN_FALLBACK = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
   const CHUNK_SIZE = 16 * 1024; // 16 KiB — safe across browsers incl. iOS Safari
-  const BUFFER_HIGH = 8 * 1024 * 1024; // pause sending above 8 MiB buffered
-  const BUFFER_LOW = 256 * 1024; // resume when drained below 256 KiB
+  const BUFFER_HIGH = 512 * 1024; // keep iOS/TURN relay memory pressure low
+  const BUFFER_LOW = 64 * 1024; // resume when the relay/browser queue drains
+  const SEND_YIELD_EVERY = 256 * 1024;
   const AUTO_FALLBACK_MS = 2000;
   const E2EE_MAGIC = 0xe2;
   const E2EE_JSON = 1;
@@ -599,10 +600,23 @@
 
   function drain() {
     return new Promise((resolve) => {
-      if (channel.bufferedAmount <= BUFFER_HIGH) return resolve();
-      const onLow = () => { channel.removeEventListener("bufferedamountlow", onLow); resolve(); };
-      channel.addEventListener("bufferedamountlow", onLow);
+      if (!channel || channel.readyState !== "open" || channel.bufferedAmount <= BUFFER_HIGH) return resolve();
+      const ch = channel;
+      const done = () => {
+        ch.removeEventListener("bufferedamountlow", onLow);
+        ch.removeEventListener("close", done);
+        ch.removeEventListener("error", done);
+        resolve();
+      };
+      const onLow = () => done();
+      ch.addEventListener("close", done, { once: true });
+      ch.addEventListener("error", done, { once: true });
+      ch.addEventListener("bufferedamountlow", onLow);
     });
+  }
+
+  function yieldToBrowser() {
+    return new Promise((resolve) => setTimeout(resolve, 0));
   }
 
   // Send one file in chunks with backpressure. Returns a transfer id.
@@ -615,6 +629,7 @@
     hooks.onStart && hooks.onStart(id, meta);
     await sendEncryptedJson({ t: "meta", id, ...meta });
     let offset = 0;
+    let lastYield = 0;
     try {
       while (offset < file.size) {
         if (canceled.has(id)) {
@@ -628,6 +643,10 @@
         await sendEncryptedBinary(buf);
         offset += buf.byteLength;
         hooks.onProgress && hooks.onProgress(id, offset, file.size);
+        if (offset - lastYield >= SEND_YIELD_EVERY) {
+          lastYield = offset;
+          await yieldToBrowser();
+        }
       }
       await sendEncryptedJson({ t: "complete", id });
       hooks.onDone && hooks.onDone(id);
