@@ -20,7 +20,7 @@ Install on iPhone/iPad:
 2. Open each file on iOS and add it to Shortcuts.
 3. Reliable room-only flow: sender runs `wklej create`, receiver runs `wklej join`, both enter the same room name.
 4. Small Share Sheet flow for tiny payloads: sender uses Share -> `wklej share`, enters a room name, and Safari opens once with the room command plus local payload.
-5. Reliable Share Sheet flow: sender uses Share -> `wklej wait share`. It opens a short room URL first, waits 20 seconds, then hands off the shared item through `/shortcut-attach`.
+5. Reliable Share Sheet flow: sender uses Share -> `wklej wait share`. It opens a short room URL first, waits until the browser reports that E2EE/DataChannel is ready, then hands off the shared item through `/shortcut-attach`.
 6. The queued payload sends only after WebRTC and browser E2EE are ready.
 
 Regenerate the signed shortcut from this repo:
@@ -31,7 +31,7 @@ python3 scripts/generate-ios-shortcut.py
 
 The generated Share Sheet shortcut is intentionally small and serverless. It opens Safari once with the room command in query params and the shared item in a URL fragment, so the payload stays in Safari and is never sent to the Worker. Use it for small text/files only. If iOS refuses to encode a file, use `wklej create` and add the file from the in-browser attachment button after the peer is connected.
 
-`wklej wait share` is the recommended iOS Share Sheet flow. The first URL is short and creates the room, so Safari should open the waiting room reliably. The Shortcut then waits 20 seconds and opens `/shortcut-attach`; the service worker returns `204 No Content`, keeps the WebRTC tab visible, and retries delivery briefly if the session is not connected yet.
+`wklej wait share` is the recommended iOS Share Sheet flow. The first URL is short and creates the room, so Safari should open the waiting room reliably. The Shortcut then calls `/api/shortcut-wait` and only opens `/shortcut-attach` after the browser marks the E2EE/DataChannel session as ready. The service worker returns `204 No Content`, keeps the WebRTC tab visible, and retries delivery briefly if the session is not connected yet.
 
 ## Receive / create room
 

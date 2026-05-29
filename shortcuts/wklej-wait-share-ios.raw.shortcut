@@ -53,7 +53,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>UUID</key>
-				<string>AB7DB034-4EEE-4A4C-96A0-9576C1006911</string>
+				<string>EE2E331D-46AC-477F-A58D-1C3B68F3A625</string>
 				<key>WFVariableName</key>
 				<string>shared</string>
 				<key>WFInput</key>
@@ -74,7 +74,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>WFCommentActionText</key>
-				<string>Reliable iOS flow: open a short room URL first, wait 20 seconds, then hand off the shared item through the local service worker.</string>
+				<string>Reliable iOS flow: open a short room URL first, wait until the browser reports that E2EE/DataChannel is ready, then hand off the shared item through the service worker.</string>
 			</dict>
 		</dict>
 		<dict>
@@ -83,7 +83,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>UUID</key>
-				<string>E4C9AF97-7003-428B-A7E9-83AA43EB0603</string>
+				<string>C029D3B4-1032-4467-B385-50536C022A8B</string>
 				<key>WFAskActionPrompt</key>
 				<string>Room name</string>
 				<key>WFInputType</key>
@@ -100,7 +100,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>UUID</key>
-				<string>731971BA-8B9A-462F-942F-5A7C906CBA9A</string>
+				<string>FD7A917E-6CAE-40A9-A5F1-158AE425AABC</string>
 				<key>WFEncodeMode</key>
 				<string>Encode</string>
 				<key>WFInput</key>
@@ -108,7 +108,7 @@
 					<key>Value</key>
 					<dict>
 						<key>OutputUUID</key>
-						<string>E4C9AF97-7003-428B-A7E9-83AA43EB0603</string>
+						<string>C029D3B4-1032-4467-B385-50536C022A8B</string>
 						<key>Type</key>
 						<string>ActionOutput</string>
 						<key>OutputName</key>
@@ -125,19 +125,28 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>UUID</key>
-				<string>7782B178-DD3A-4AD1-9C4B-C826AEE22D7A</string>
+				<string>F0FAC7BE-D557-4DD7-82F4-EE54345B6848</string>
 				<key>WFURLActionURL</key>
 				<dict>
 					<key>Value</key>
 					<dict>
 						<key>string</key>
-						<string>https://wklej.net/?shortcut=create&amp;room=￼</string>
+						<string>https://wklej.net/?shortcut=create&amp;room=￼#callback=￼</string>
 						<key>attachmentsByRange</key>
 						<dict>
 							<key>{40, 1}</key>
 							<dict>
 								<key>OutputUUID</key>
-								<string>731971BA-8B9A-462F-942F-5A7C906CBA9A</string>
+								<string>FD7A917E-6CAE-40A9-A5F1-158AE425AABC</string>
+								<key>Type</key>
+								<string>ActionOutput</string>
+								<key>OutputName</key>
+								<string>URL Encoded Text</string>
+							</dict>
+							<key>{51, 1}</key>
+							<dict>
+								<key>OutputUUID</key>
+								<string>FD7A917E-6CAE-40A9-A5F1-158AE425AABC</string>
 								<key>Type</key>
 								<string>ActionOutput</string>
 								<key>OutputName</key>
@@ -160,7 +169,7 @@
 					<key>Value</key>
 					<dict>
 						<key>OutputUUID</key>
-						<string>7782B178-DD3A-4AD1-9C4B-C826AEE22D7A</string>
+						<string>F0FAC7BE-D557-4DD7-82F4-EE54345B6848</string>
 						<key>Type</key>
 						<string>ActionOutput</string>
 						<key>OutputName</key>
@@ -173,11 +182,58 @@
 		</dict>
 		<dict>
 			<key>WFWorkflowActionIdentifier</key>
-			<string>is.workflow.actions.delay</string>
+			<string>is.workflow.actions.url</string>
 			<key>WFWorkflowActionParameters</key>
 			<dict>
-				<key>WFDelayActionTime</key>
-				<integer>20</integer>
+				<key>UUID</key>
+				<string>9BD2FF08-AAA4-41EA-AB40-BE90966520D8</string>
+				<key>WFURLActionURL</key>
+				<dict>
+					<key>Value</key>
+					<dict>
+						<key>string</key>
+						<string>https://wklej.net/api/shortcut-wait?callback=￼&amp;timeout=110</string>
+						<key>attachmentsByRange</key>
+						<dict>
+							<key>{45, 1}</key>
+							<dict>
+								<key>OutputUUID</key>
+								<string>FD7A917E-6CAE-40A9-A5F1-158AE425AABC</string>
+								<key>Type</key>
+								<string>ActionOutput</string>
+								<key>OutputName</key>
+								<string>URL Encoded Text</string>
+							</dict>
+						</dict>
+					</dict>
+					<key>WFSerializationType</key>
+					<string>WFTextTokenString</string>
+				</dict>
+			</dict>
+		</dict>
+		<dict>
+			<key>WFWorkflowActionIdentifier</key>
+			<string>is.workflow.actions.downloadurl</string>
+			<key>WFWorkflowActionParameters</key>
+			<dict>
+				<key>UUID</key>
+				<string>64AE6A7B-504A-45D0-B5DF-D3C767DBC28A</string>
+				<key>WFHTTPMethod</key>
+				<string>GET</string>
+				<key>WFURL</key>
+				<dict>
+					<key>Value</key>
+					<dict>
+						<key>OutputUUID</key>
+						<string>9BD2FF08-AAA4-41EA-AB40-BE90966520D8</string>
+						<key>Type</key>
+						<string>ActionOutput</string>
+						<key>OutputName</key>
+						<string>URL</string>
+					</dict>
+					<key>WFSerializationType</key>
+					<string>WFTextTokenAttachment</string>
+				</dict>
 			</dict>
 		</dict>
 		<dict>
@@ -186,7 +242,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>UUID</key>
-				<string>F75F65F9-9960-4F1B-89BB-8EEA5C53CEA1</string>
+				<string>87EE09BB-94D9-4846-B3B3-521C6EFDC4E2</string>
 				<key>WFVariable</key>
 				<dict>
 					<key>Value</key>
@@ -207,13 +263,13 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>UUID</key>
-				<string>6AF27567-E3A5-4EF4-A973-ECCBD1A25627</string>
+				<string>1EAEC1D2-9EF3-4E18-9401-57A4D97BDC1D</string>
 				<key>WFInput</key>
 				<dict>
 					<key>Value</key>
 					<dict>
 						<key>OutputUUID</key>
-						<string>F75F65F9-9960-4F1B-89BB-8EEA5C53CEA1</string>
+						<string>87EE09BB-94D9-4846-B3B3-521C6EFDC4E2</string>
 						<key>Type</key>
 						<string>ActionOutput</string>
 						<key>OutputName</key>
@@ -230,7 +286,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>UUID</key>
-				<string>5C36042E-F3C2-4585-A37F-1988287380C5</string>
+				<string>76BF50DF-FB4C-4FC5-85B2-2C6976731C76</string>
 				<key>WFEncodeMode</key>
 				<string>Encode</string>
 				<key>WFInput</key>
@@ -238,7 +294,7 @@
 					<key>Value</key>
 					<dict>
 						<key>OutputUUID</key>
-						<string>6AF27567-E3A5-4EF4-A973-ECCBD1A25627</string>
+						<string>1EAEC1D2-9EF3-4E18-9401-57A4D97BDC1D</string>
 						<key>Type</key>
 						<string>ActionOutput</string>
 						<key>OutputName</key>
@@ -255,7 +311,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>UUID</key>
-				<string>1528047D-73A6-4CB7-94E0-8833E7DFE5E9</string>
+				<string>C68D18A9-7F56-4641-9F7F-CBE10A641CB4</string>
 				<key>WFVariable</key>
 				<dict>
 					<key>Value</key>
@@ -276,7 +332,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>UUID</key>
-				<string>BE98073C-EA21-4231-BDE7-B159C5D6D6E5</string>
+				<string>DE9DC15C-D0A5-4223-89F5-E90544415A5C</string>
 				<key>WFEncodeMode</key>
 				<string>Encode</string>
 				<key>WFBase64LineBreakMode</key>
@@ -286,7 +342,7 @@
 					<key>Value</key>
 					<dict>
 						<key>OutputUUID</key>
-						<string>1528047D-73A6-4CB7-94E0-8833E7DFE5E9</string>
+						<string>C68D18A9-7F56-4641-9F7F-CBE10A641CB4</string>
 						<key>Type</key>
 						<string>ActionOutput</string>
 						<key>OutputName</key>
@@ -303,7 +359,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>UUID</key>
-				<string>86F2CDC0-7464-4EF1-96C4-4233320DF75F</string>
+				<string>84891B07-BEB5-4A55-93EB-15D99B35185A</string>
 				<key>WFEncodeMode</key>
 				<string>Encode</string>
 				<key>WFInput</key>
@@ -311,7 +367,7 @@
 					<key>Value</key>
 					<dict>
 						<key>OutputUUID</key>
-						<string>BE98073C-EA21-4231-BDE7-B159C5D6D6E5</string>
+						<string>DE9DC15C-D0A5-4223-89F5-E90544415A5C</string>
 						<key>Type</key>
 						<string>ActionOutput</string>
 						<key>OutputName</key>
@@ -328,7 +384,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>UUID</key>
-				<string>51370AFD-6492-45F7-8385-57C58B3C3AAF</string>
+				<string>E7F53296-986E-4842-A458-1C03087E9A0D</string>
 				<key>WFURLActionURL</key>
 				<dict>
 					<key>Value</key>
@@ -340,7 +396,7 @@
 							<key>{39, 1}</key>
 							<dict>
 								<key>OutputUUID</key>
-								<string>731971BA-8B9A-462F-942F-5A7C906CBA9A</string>
+								<string>FD7A917E-6CAE-40A9-A5F1-158AE425AABC</string>
 								<key>Type</key>
 								<string>ActionOutput</string>
 								<key>OutputName</key>
@@ -349,7 +405,7 @@
 							<key>{66, 1}</key>
 							<dict>
 								<key>OutputUUID</key>
-								<string>5C36042E-F3C2-4585-A37F-1988287380C5</string>
+								<string>76BF50DF-FB4C-4FC5-85B2-2C6976731C76</string>
 								<key>Type</key>
 								<string>ActionOutput</string>
 								<key>OutputName</key>
@@ -358,7 +414,7 @@
 							<key>{103, 1}</key>
 							<dict>
 								<key>OutputUUID</key>
-								<string>86F2CDC0-7464-4EF1-96C4-4233320DF75F</string>
+								<string>84891B07-BEB5-4A55-93EB-15D99B35185A</string>
 								<key>Type</key>
 								<string>ActionOutput</string>
 								<key>OutputName</key>
@@ -381,7 +437,7 @@
 					<key>Value</key>
 					<dict>
 						<key>OutputUUID</key>
-						<string>51370AFD-6492-45F7-8385-57C58B3C3AAF</string>
+						<string>E7F53296-986E-4842-A458-1C03087E9A0D</string>
 						<key>Type</key>
 						<string>ActionOutput</string>
 						<key>OutputName</key>
