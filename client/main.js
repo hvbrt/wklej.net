@@ -981,32 +981,37 @@
   function appendMessage(direction, text) {
     const value = String(text || "").trim();
     if (!value) return;
-    board.hidden = false;
     const id = `msg-${Date.now()}-${++messageSeq}`;
-    const bubble = document.createElement("button");
-    bubble.type = "button";
-    bubble.className = "msg-bubble " + (direction === "out" ? "out" : "in");
-    bubble.dataset.previewId = id;
-    bubble.textContent = value.slice(0, 8000);
-    bubble.addEventListener("click", () => selectPreviewItem(id));
-    stream.appendChild(bubble);
-    while (stream.children.length > 80) {
-      const old = stream.firstElementChild;
-      if (old && old.dataset && old.dataset.previewId) previewItems.delete(old.dataset.previewId);
-      if (old) old.remove();
-    }
-    rememberPreviewItem({
+    board.hidden = true;
+    makeTextCard(id, direction, value);
+  }
+
+  function makeTextCard(id, direction, text) {
+    const item = {
       id,
       type: "message",
       direction,
       kind: "text",
       name: direction === "out" ? "sent text" : "received text",
-      size: value.length,
-      text: value,
-    });
-    requestAnimationFrame(() => {
-      stream.scrollTop = stream.scrollHeight;
-    });
+      size: text.length,
+      text,
+    };
+    const node = tpl.content.firstElementChild.cloneNode(true);
+    node.classList.add("text-att", "done");
+    node.dataset.id = id;
+    node.dataset.previewId = id;
+    node.querySelector(".att-name").textContent = item.name;
+    node.querySelector(".att-size").textContent = fmtBytes(item.size);
+    node.querySelector(".att-state").textContent = direction === "out" ? "sent" : "received";
+    node.querySelector(".att-fill").style.width = "100%";
+    decorateCard(node, { name: item.name + ".txt", size: item.size, mime: "text/plain", kind: "text" });
+    node.addEventListener("click", () => selectPreviewItem(id));
+    const action = node.querySelector(".att-action");
+    action.textContent = "";
+    action.style.display = "none";
+    attWrap.prepend(node);
+    cards[id] = node;
+    rememberPreviewItem(item);
   }
 
   async function copyMessages() {
@@ -1544,13 +1549,8 @@
     rememberAttachment(id, blob, name || "plik");
     if ((blob.type || "").startsWith("image/")) setCardImagePreview(n, url);
     const a = n.querySelector(".att-action");
-    a.style.display = "grid";
-    a.textContent = "↓";
-    a.title = "pobierz";
-    a.onclick = (event) => {
-      event.stopPropagation();
-      downloadBlobUrl(url, name || "plik");
-    };
+    a.textContent = "";
+    a.style.display = "none";
     rememberPreviewItem({
       id,
       type: "file",
