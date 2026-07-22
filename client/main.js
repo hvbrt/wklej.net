@@ -876,6 +876,8 @@
     if (previewEdit) {
       previewEdit.hidden = item.type !== "message";
       previewEdit.textContent = "edit";
+      previewEdit.title = "edit text";
+      previewEdit.setAttribute("aria-label", "edit text");
       previewEdit.onclick = () => editPreviewItem(item);
     }
 
@@ -919,14 +921,37 @@
     if (!item || item.type !== "message" || !previewText || !previewEdit) return;
     if (previewText.readOnly) {
       previewText.readOnly = false;
-      if (dropzone) dropzone.hidden = false;
-      previewEdit.textContent = "send";
+      if (dropzone) dropzone.hidden = true;
+      if (previewDownload) previewDownload.hidden = true;
+      previewEdit.textContent = "↑";
+      previewEdit.title = "save text edit";
+      previewEdit.setAttribute("aria-label", "save text edit");
+      previewText.focus({ preventScroll: true });
+      previewText.setSelectionRange(previewText.value.length, previewText.value.length);
       return;
     }
     const value = previewText.value.trim();
-    if (!value || !window.__T.isOpen()) return;
-    sendTextValue(value);
-    resetPreviewSelection();
+    if (!value) return;
+    savePreviewTextEdit(item, value);
+    previewText.readOnly = true;
+    renderPreview(previewItems.get(item.id));
+  }
+
+  function savePreviewTextEdit(item, value) {
+    const next = {
+      ...item,
+      text: value,
+      size: value.length,
+    };
+    previewItems.set(item.id, next);
+    const node = cards[item.id];
+    if (node) {
+      const size = node.querySelector(".att-size");
+      const state = node.querySelector(".att-state");
+      if (size) size.textContent = fmtBytes(next.size);
+      if (state) state.textContent = next.direction === "out" ? "sent" : "received";
+    }
+    updateFileCount();
   }
 
   function downloadPreviewItem(item) {

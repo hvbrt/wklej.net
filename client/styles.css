@@ -1389,8 +1389,8 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   display: grid;
   grid-template-columns: minmax(220px, .82fr) minmax(260px, 1.18fr);
   gap: 12px;
-  align-items: stretch;
-  min-height: 338px;
+  align-items: start;
+  min-height: 0;
 }
 .transfer-workspace.no-preview {
   grid-template-columns: 1fr;
@@ -1413,15 +1413,18 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
     0 18px 38px -34px rgba(20,24,43,.7);
 }
 .file-manager {
+  align-self: start;
   min-height: 0;
+  max-height: 138px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding-top: 12px;
+  padding: 12px 12px 10px;
 }
 .preview-panel {
   position: relative;
   min-height: 0;
+  max-height: 138px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1520,7 +1523,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 .preview-action:active { transform: scale(.96); }
 .preview-body {
   flex: 1;
-  min-height: 0;
+  min-height: 118px;
   height: auto;
   padding: 10px;
   display: grid;
@@ -1531,7 +1534,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   width: 100%;
   min-width: 0;
   height: 100%;
-  min-height: 0;
+  min-height: 98px;
   border: 0;
   border-radius: 15px;
   background: transparent;
@@ -1924,15 +1927,16 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 .att-zip:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(109,94,252,.18), 0 12px 24px -18px var(--accent); }
 .att-zip:active { transform: scale(.96); }
 .attachments {
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
-  padding: 0 10px 10px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-  align-content: start;
+  padding: 0;
+  display: flex;
+  align-items: center;
   gap: 8px;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   overscroll-behavior: contain;
+  scroll-snap-type: x proximity;
   scrollbar-width: thin;
 }
 .attachments:empty::before {
@@ -1950,6 +1954,8 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   opacity: .72;
 }
 .att {
+  flex: 0 0 76px;
+  scroll-snap-align: start;
   display: grid;
   grid-template-rows: auto auto auto;
   justify-items: center;
