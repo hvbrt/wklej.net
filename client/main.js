@@ -1125,10 +1125,12 @@
   function flashCopyControl(control, text) {
     if (!control) return;
     const before = control.textContent || "⧉";
+    control.classList.toggle("is-feedback", control.classList.contains("att-copy"));
     control.textContent = text;
     clearTimeout(control.copyTimer);
     control.copyTimer = setTimeout(() => {
       control.textContent = before;
+      control.classList.remove("is-feedback");
     }, 900);
   }
 
