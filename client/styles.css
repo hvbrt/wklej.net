@@ -1941,22 +1941,141 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 @media (max-width: 720px) {
   .glass.wide { max-width: min(430px, calc(100vw - 28px)); }
   [data-screen="connected"].wide {
-    padding: 44px 14px 18px;
+    max-height: calc(100dvh - 116px);
+    padding: 40px 12px 14px;
+    gap: 8px;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
   }
   .transfer-workspace {
     grid-template-columns: 1fr;
+    gap: 8px;
     min-height: 0;
   }
   .file-manager {
-    max-height: 292px;
+    max-height: 214px;
+  }
+  .file-manager-head,
+  .preview-head {
+    min-height: 44px;
+    padding: 10px 10px 7px;
+  }
+  .file-manager-title,
+  .preview-title {
+    font-size: 11px;
+  }
+  .file-manager-count,
+  .preview-meta,
+  .pane-label {
+    font-size: 10px;
+  }
+  .pane-label {
+    padding: 0 10px 4px;
+  }
+  .file-label {
+    padding-top: 6px;
+  }
+  .message-board {
+    max-height: 88px;
+    min-height: 48px;
+  }
+  .message-stream {
+    max-height: 54px;
+    min-height: 38px;
+    padding: 0 8px 6px;
+  }
+  .msg-bubble {
+    padding: 6px 8px;
+    font-size: 13px;
+    line-height: 1.22;
+  }
+  .copy-board {
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    font-size: 13px;
+  }
+  .attachments {
+    padding: 0 7px 8px;
+    gap: 6px;
+  }
+  .attachments:empty::before {
+    min-height: 46px;
+    font-size: 10px;
+  }
+  .att {
+    padding: 8px;
+    gap: 8px;
+  }
+  .att-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    font-size: 11px;
+  }
+  .att-name {
+    font-size: 12.5px;
+    max-height: 2.55em;
+  }
+  .att-sub {
+    font-size: 10.5px;
+  }
+  .att-action {
+    width: 34px;
+    height: 34px;
+  }
+  .preview-panel {
+    max-height: 178px;
+    overflow: hidden;
   }
   .preview-body {
-    min-height: 210px;
+    min-height: 104px;
+    padding: 8px;
   }
   .preview-empty,
   .preview-text,
   .preview-image {
-    min-height: 190px;
+    min-height: 88px;
+    border-radius: 13px;
+  }
+  .preview-text {
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .preview-action {
+    min-width: 32px;
+    height: 30px;
+    padding: 0 9px;
+    border-radius: 11px;
+  }
+  .dropzone {
+    border-radius: 16px;
+    padding: 1px;
+  }
+  .editor {
+    min-height: 38px;
+    max-height: 82px;
+    padding: 8px 10px;
+    border-radius: 14px;
+    font-size: 14px;
+  }
+  .editor-bar {
+    gap: 6px;
+    margin-top: 5px;
+  }
+  .counter,
+  .editor-bar .btn.icon,
+  .btn.primary.send-arrow {
+    min-width: 38px;
+    width: 38px;
+    height: 38px;
+    border-radius: 13px;
+  }
+  .session-footer {
+    margin-top: 6px;
   }
 }
 
