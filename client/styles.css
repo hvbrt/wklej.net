@@ -1739,6 +1739,39 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 }
 .dropzone[hidden] { display: none; }
 .dropzone.over { background: transparent; box-shadow: none; }
+.dropzone:not(.has-text)::before {
+  content: "W K L E J   T E K S T";
+  position: absolute;
+  z-index: 0;
+  left: 10px;
+  top: 0;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--connected-muted);
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255,255,255,.18), transparent 34%),
+    color-mix(in srgb, var(--connected-ink) 10%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.12),
+    0 0 0 1px rgba(255,255,255,.05),
+    0 10px 22px -22px rgba(20,24,43,.68);
+  font-family: var(--disp);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: .24em;
+  line-height: 1;
+  opacity: .72;
+  pointer-events: none;
+  text-transform: uppercase;
+  transition: opacity .12s, transform .12s;
+}
+.dropzone:not(.has-text):focus-within::before {
+  opacity: 0;
+  transform: translateY(-2px) scale(.98);
+}
 .editor {
   position: relative;
   z-index: 1;
@@ -1760,7 +1793,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   animation: none;
 }
 .editor::placeholder {
-  color: var(--connected-muted);
+  color: transparent;
   font-family: var(--disp);
   font-size: 11px;
   font-weight: 800;
@@ -1773,7 +1806,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 }
 .editor:focus {
   animation: none;
-  color: var(--panel-ink);
+  color: var(--connected-ink);
   box-shadow: none;
 }
 .session-themed .editor:focus {
@@ -2157,19 +2190,19 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 
 @media (min-width: 721px) {
   .transfer-workspace.no-preview {
-    grid-template-columns: minmax(216px, 248px);
+    grid-template-columns: minmax(320px, 420px);
     justify-content: start;
   }
   .transfer-workspace.no-preview .file-manager {
-    width: clamp(216px, 32vw, 248px);
-    aspect-ratio: 1 / 1;
+    width: clamp(320px, 44vw, 420px);
+    aspect-ratio: 1.42 / 1;
     max-height: none;
     min-height: 0;
   }
   .transfer-workspace.no-preview .attachments {
     height: 100%;
     display: grid;
-    grid-template-columns: repeat(2, minmax(76px, 1fr));
+    grid-template-columns: repeat(3, minmax(76px, 1fr));
     align-content: start;
     justify-items: center;
     gap: 8px;
