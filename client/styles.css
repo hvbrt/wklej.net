@@ -294,6 +294,8 @@ body {
 }
 .center { text-align: center; }
 @keyframes rise { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes panel-pop { from { opacity: 0; transform: translateY(8px) scale(.992); } to { opacity: 1; transform: none; } }
+@keyframes tile-pop { from { opacity: 0; transform: translateY(6px) scale(.96); } to { opacity: 1; transform: none; } }
 
 .brand { text-align: center; margin-bottom: 16px; }
 .brand.compact {
@@ -1423,6 +1425,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  animation: panel-pop .16s cubic-bezier(.16,1,.3,1) both;
 }
 .file-manager-head,
 .preview-head {
@@ -1498,21 +1501,20 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   align-items: center;
   justify-content: center;
   color: #05070d;
-  background: rgba(255,255,255,.48);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.4),
-    0 12px 24px -20px rgba(20,24,43,.64);
+  background: transparent;
+  box-shadow: none;
   font-family: var(--disp);
   font-size: 11px;
   font-weight: 900;
   line-height: 1;
   cursor: pointer;
-  transition: transform .12s, background .15s, box-shadow .15s;
+  transition: transform .1s, opacity .12s, filter .12s;
 }
 .preview-action[hidden] { display: none; }
 .preview-action:hover,
 .preview-action:focus-visible {
-  background: rgba(255,255,255,.72);
+  background: transparent;
+  filter: drop-shadow(0 8px 14px rgba(20,24,43,.18));
   outline: none;
 }
 .preview-action:active { transform: scale(.96); }
@@ -1706,7 +1708,9 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.62),
     0 16px 34px -32px rgba(20,24,43,.66);
+  animation: panel-pop .14s cubic-bezier(.16,1,.3,1) both;
 }
+.dropzone[hidden] { display: none; }
 .dropzone.over { background: rgba(255,255,255,.78); box-shadow: 0 16px 34px -32px rgba(20,24,43,.6); }
 .editor {
   position: relative;
@@ -1788,27 +1792,36 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   align-items: center;
   justify-content: center;
   color: #05070d;
-  background: rgba(255,255,255,.48);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.36),
-    0 12px 24px -20px rgba(20,24,43,.64);
+  background: transparent;
+  box-shadow: none;
   font-family: var(--disp);
   font-size: 12px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  transition: transform .12s, background .15s, box-shadow .15s, color .15s;
+  transition: transform .1s, opacity .12s, filter .12s, color .12s;
 }
 .editor-bar .btn.icon {
   width: 42px;
   height: 42px;
   color: #05070d;
-  background: rgba(255,255,255,.48);
+  background: transparent;
   border: 0;
   border-radius: 14px;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.36),
-    0 12px 24px -20px rgba(20,24,43,.64);
+  box-shadow: none;
+  transition: transform .1s, opacity .12s, filter .12s;
+}
+.counter:hover,
+.counter:focus-visible,
+.editor-bar .btn.icon:hover,
+.editor-bar .btn.icon:focus-visible {
+  filter: drop-shadow(0 8px 14px rgba(20,24,43,.18));
+  outline: none;
+}
+.counter:active,
+.editor-bar .btn.icon:active,
+.btn.primary.send-arrow:active {
+  transform: scale(.95);
 }
 .attach-plus.is-plus {
   position: relative;
@@ -1817,19 +1830,15 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   height: 42px;
   padding: 0;
   color: transparent;
-  background: rgba(255,255,255,.48);
+  background: transparent;
   border: 0;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.36),
-    0 12px 24px -20px rgba(20,24,43,.64);
+  box-shadow: none;
   cursor: pointer;
   overflow: hidden;
 }
 .session-themed .attach-plus.is-plus {
-  background: rgba(255,255,255,.48);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.36),
-    0 12px 24px -20px rgba(20,24,43,.64);
+  background: transparent;
+  box-shadow: none;
 }
 .attach-plus.is-plus::before,
 .attach-plus.is-plus::after {
@@ -1852,10 +1861,8 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 }
 .attach-plus.is-plus:hover,
 .attach-plus.is-plus:focus-visible {
-  background: rgba(255,255,255,.66);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.42),
-    0 14px 28px -20px rgba(20,24,43,.72);
+  background: transparent;
+  filter: drop-shadow(0 8px 14px rgba(20,24,43,.18));
   outline: none;
 }
 .attach-plus.is-plus:active { transform: scale(.95); }
@@ -1883,25 +1890,23 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   height: 42px;
   padding: 0;
   color: #05070d;
-  background: rgba(255,255,255,.72);
+  background: transparent;
   border: 0;
   border-radius: 14px;
   font-size: 18px;
   line-height: 1;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.48),
-    0 12px 24px -20px rgba(20,24,43,.64);
+  box-shadow: none;
+  transition: transform .1s, opacity .12s, filter .12s;
 }
 .btn.primary.send-arrow:hover,
 .btn.primary.send-arrow:focus-visible {
-  background: rgba(255,255,255,.9);
+  background: transparent;
+  filter: drop-shadow(0 8px 14px rgba(20,24,43,.18));
   outline: none;
 }
 .session-themed .btn.primary.send-arrow {
-  background: rgba(255,255,255,.72);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.48),
-    0 12px 24px -20px rgba(20,24,43,.64);
+  background: transparent;
+  box-shadow: none;
 }
 
 .attachments-head { display: flex; justify-content: flex-end; }
@@ -1967,15 +1972,16 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   padding: 8px 5px;
   color: inherit;
   background: transparent;
-  animation: rise .3s both;
+  animation: tile-pop .16s cubic-bezier(.16,1,.3,1) both;
   cursor: pointer;
-  transition: background .15s, border-color .15s, box-shadow .15s, transform .12s;
+  transition: filter .12s, transform .1s;
 }
 .att:hover {
   background: transparent;
   border-color: transparent;
+  filter: drop-shadow(0 10px 16px rgba(20,24,43,.12));
 }
-.att:active { transform: scale(.99); }
+.att:active { transform: scale(.97); }
 .att-icon {
   width: 44px;
   height: 44px;
@@ -2014,6 +2020,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   width: 100%;
   max-height: 1.2em;
   overflow: hidden;
+  color: #05070d;
   font-weight: 800;
   font-size: 10.5px;
   line-height: 1.2;
@@ -2027,10 +2034,11 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 .att-name::-webkit-scrollbar-thumb { background: rgba(127,127,127,.35); border-radius: 999px; }
 .att-sub {
   margin-top: 3px;
-  color: var(--muted);
+  color: #05070d;
   font-size: 9.5px;
   font-weight: 700;
   line-height: 1.15;
+  opacity: .72;
 }
 .att-bar {
   width: 100%;
