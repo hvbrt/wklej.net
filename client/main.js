@@ -850,7 +850,7 @@
     const name = item.name || (item.type === "message" ? "text note" : "file");
     if (transferWorkspace) transferWorkspace.classList.remove("no-preview");
     if (previewPanel) previewPanel.hidden = false;
-    if (dropzone) dropzone.hidden = false;
+    if (dropzone) dropzone.hidden = true;
     if (previewTitle) previewTitle.textContent = name;
     if (previewMeta) {
       const pieces = [item.direction === "out" ? "sent" : item.direction === "in" ? "received" : item.status || ""];
@@ -919,9 +919,7 @@
     if (!item || item.type !== "message" || !previewText || !previewEdit) return;
     if (previewText.readOnly) {
       previewText.readOnly = false;
-      if (dropzone) dropzone.hidden = true;
-      previewText.focus();
-      previewText.setSelectionRange(previewText.value.length, previewText.value.length);
+      if (dropzone) dropzone.hidden = false;
       previewEdit.textContent = "send";
       return;
     }
