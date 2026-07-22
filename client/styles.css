@@ -118,6 +118,11 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
+body:not([data-active-screen="connected"]) .stage {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
 .aurora {
   position: fixed;
   inset: -18vmax;
@@ -1244,6 +1249,8 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 [data-screen="connected"].wide {
   padding: 44px 20px 22px;
   display: grid;
+  align-content: start;
+  align-items: start;
   gap: 12px;
 }
 .conn-head {
@@ -1703,10 +1710,13 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 
 .dropzone {
   position: relative;
+  align-self: start;
+  width: 100%;
   overflow: visible;
   border: 0;
   border-radius: 18px;
   transition: border-color .15s, background .15s, box-shadow .15s;
+  margin-top: clamp(28px, 7vh, 76px);
   padding: 3px;
   background:
     radial-gradient(circle at 18% 0%, rgba(125,211,252,.16), transparent 38%),
@@ -1724,7 +1734,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   position: relative;
   z-index: 1;
   width: 100%;
-  min-height: 42px;
+  min-height: 32px;
   resize: none;
   border: 0;
   border-radius: 15px;
@@ -1732,11 +1742,11 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   color: #05070d;
   caret-color: #05070d;
   font-family: var(--sans);
-  font-size: 15px;
-  line-height: 1.32;
-  padding: 10px 12px;
+  font-size: 17px;
+  line-height: 1.24;
+  padding: 6px 12px;
   outline: none;
-  max-height: 124px;
+  max-height: 118px;
   box-shadow: none;
   animation: none;
 }
@@ -2216,13 +2226,14 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   .dropzone {
     border-radius: 16px;
     padding: 2px;
+    margin-top: clamp(30px, 8vh, 74px);
   }
   .editor {
-    min-height: 38px;
-    max-height: 82px;
-    padding: 8px 10px;
+    min-height: 32px;
+    max-height: 104px;
+    padding: 6px 10px;
     border-radius: 14px;
-    font-size: 14px;
+    font-size: 17px;
   }
   .editor-bar {
     gap: 6px;

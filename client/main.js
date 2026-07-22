@@ -15,6 +15,7 @@
   const screens = {};
   document.querySelectorAll("[data-screen]").forEach((el) => (screens[el.dataset.screen] = el));
   function show(name) {
+    document.body.dataset.activeScreen = name;
     for (const k in screens) screens[k].hidden = k !== name;
   }
 
@@ -180,6 +181,19 @@
   };
 
   let pendingReset = null;
+
+  document.addEventListener("copy", (event) => {
+    if (state.mode === "connected") return;
+    event.preventDefault();
+  });
+  document.addEventListener("cut", (event) => {
+    if (state.mode === "connected") return;
+    event.preventDefault();
+  });
+  document.addEventListener("contextmenu", (event) => {
+    if (state.mode === "connected") return;
+    event.preventDefault();
+  });
   let graceCountdownInterval = 0;
   let graceCountdownTimeout = 0;
   let graceExtendInterval = 0;
@@ -980,7 +994,7 @@
 
   function autosize() {
     editor.style.height = "auto";
-    editor.style.height = Math.min(Math.max(editor.scrollHeight, 42), 124) + "px";
+    editor.style.height = Math.min(Math.max(editor.scrollHeight, 32), 118) + "px";
     const len = editor.value.length;
     const empty = len === 0;
     counter.textContent = empty ? "+" : String(len);
