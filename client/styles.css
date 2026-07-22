@@ -1389,6 +1389,12 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   gap: 10px;
   min-height: 348px;
 }
+.transfer-workspace.no-preview {
+  grid-template-columns: 1fr;
+}
+.preview-panel[hidden] {
+  display: none;
+}
 .file-manager,
 .preview-panel {
   min-width: 0;
@@ -1529,6 +1535,13 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   line-height: 1.45;
   outline: none;
   scrollbar-width: thin;
+}
+.preview-text:not([readonly]) {
+  border-color: rgba(5,7,13,.32);
+  background: rgba(255,255,255,.56);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.42),
+    0 0 0 3px rgba(5,7,13,.07);
 }
 .preview-image {
   object-fit: contain;

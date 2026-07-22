@@ -759,6 +759,8 @@
   const board = $("message-board");
   const stream = $("message-stream");
   const copyBoard = $("copy-board");
+  const transferWorkspace = $("transfer-workspace");
+  const previewPanel = $("preview-panel");
   const fileCount = $("file-manager-count");
   const previewTitle = $("preview-title");
   const previewMeta = $("preview-meta");
@@ -769,26 +771,21 @@
   const previewDownload = $("preview-download");
   const previewItems = new Map();
   let selectedPreviewId = "";
-  let previewTextSeq = 0;
   let messageSeq = 0;
   let copyTimer = 0;
 
   function updateFileCount() {
     if (!fileCount) return;
-    const messages = Array.from(previewItems.values()).filter((item) => item.type === "message").length;
-    const files = previewItems.size - messages;
-    if (!previewItems.size) fileCount.textContent = "empty";
-    else if (files && messages) fileCount.textContent = `${files} files · ${messages} text`;
-    else if (files) fileCount.textContent = `${files} files`;
-    else fileCount.textContent = `${messages} text`;
+    const count = previewItems.size;
+    if (!count) fileCount.textContent = "empty";
+    else fileCount.textContent = `${count} attachment${count === 1 ? "" : "s"}`;
   }
 
   function rememberPreviewItem(item) {
     if (!item || !item.id) return;
     previewItems.set(item.id, { ...(previewItems.get(item.id) || {}), ...item });
     updateFileCount();
-    if (!selectedPreviewId) selectPreviewItem(item.id);
-    else if (selectedPreviewId === item.id) renderPreview(previewItems.get(item.id));
+    if (selectedPreviewId === item.id) renderPreview(previewItems.get(item.id));
   }
 
   function selectPreviewItem(id) {
@@ -805,6 +802,18 @@
     selectedPreviewId = "";
     previewItems.clear();
     updateFileCount();
+    resetPreviewPanel();
+  }
+
+  function resetPreviewSelection() {
+    selectedPreviewId = "";
+    document.querySelectorAll(".preview-selected").forEach((node) => node.classList.remove("preview-selected"));
+    resetPreviewPanel();
+  }
+
+  function resetPreviewPanel() {
+    if (transferWorkspace) transferWorkspace.classList.add("no-preview");
+    if (previewPanel) previewPanel.hidden = true;
     if (previewTitle) previewTitle.textContent = "drop text or files";
     if (previewMeta) previewMeta.textContent = "nothing is stored here after the session ends";
     if (previewEmpty) {
@@ -819,8 +828,12 @@
     if (previewText) {
       previewText.hidden = true;
       previewText.value = "";
+      previewText.readOnly = true;
     }
-    if (previewEdit) previewEdit.hidden = true;
+    if (previewEdit) {
+      previewEdit.hidden = true;
+      previewEdit.textContent = "edit";
+    }
     if (previewDownload) previewDownload.hidden = true;
   }
 
@@ -829,8 +842,9 @@
       clearPreview();
       return;
     }
-    const seq = ++previewTextSeq;
     const name = item.name || (item.type === "message" ? "text note" : "file");
+    if (transferWorkspace) transferWorkspace.classList.remove("no-preview");
+    if (previewPanel) previewPanel.hidden = false;
     if (previewTitle) previewTitle.textContent = name;
     if (previewMeta) {
       const pieces = [item.direction === "out" ? "sent" : item.direction === "in" ? "received" : item.status || ""];
@@ -847,13 +861,15 @@
     if (previewText) {
       previewText.hidden = true;
       previewText.value = "";
+      previewText.readOnly = true;
     }
     if (previewDownload) {
       previewDownload.hidden = !item.blob && item.type !== "message";
       previewDownload.onclick = () => downloadPreviewItem(item);
     }
     if (previewEdit) {
-      previewEdit.hidden = item.type !== "message" && item.kind !== "text" && item.kind !== "code";
+      previewEdit.hidden = item.type !== "message";
+      previewEdit.textContent = "edit";
       previewEdit.onclick = () => editPreviewItem(item);
     }
 
@@ -874,27 +890,13 @@
       previewImage.hidden = false;
       return;
     }
-    if (item.kind === "text" || item.kind === "code") {
-      previewText.hidden = false;
-      previewText.value = "loading…";
-      item.blob
-        .slice(0, 96_000)
-        .text()
-        .then((text) => {
-          if (seq !== previewTextSeq) return;
-          previewText.value = text + (item.blob.size > 96_000 ? "\n\n… truncated preview" : "");
-        })
-        .catch(() => {
-          if (seq === previewTextSeq) showPreviewEmpty("preview unavailable");
-        });
-      return;
-    }
     showPreviewEmpty("preview unavailable · download to open");
   }
 
   function showPreviewText(text) {
     if (!previewText) return;
     previewText.hidden = false;
+    previewText.readOnly = true;
     previewText.value = String(text || "");
   }
 
@@ -908,23 +910,18 @@
   }
 
   function editPreviewItem(item) {
-    if (!item) return;
-    const placeText = (text) => {
-      editor.value = String(text || "");
-      autosize();
-      editor.focus();
-      editor.setSelectionRange(editor.value.length, editor.value.length);
-    };
-    if (item.type === "message") {
-      placeText(item.text);
+    if (!item || item.type !== "message" || !previewText || !previewEdit) return;
+    if (previewText.readOnly) {
+      previewText.readOnly = false;
+      previewText.focus();
+      previewText.setSelectionRange(previewText.value.length, previewText.value.length);
+      previewEdit.textContent = "send";
       return;
     }
-    if (!item.blob) return;
-    item.blob
-      .slice(0, 96_000)
-      .text()
-      .then(placeText)
-      .catch(() => {});
+    const value = previewText.value.trim();
+    if (!value || !window.__T.isOpen()) return;
+    sendTextValue(value);
+    resetPreviewSelection();
   }
 
   function downloadPreviewItem(item) {
@@ -972,6 +969,7 @@
     sendTextValue(v);
     editor.value = "";
     autosize();
+    resetPreviewSelection();
   }
   $("send").addEventListener("click", sendText);
   counter.addEventListener("click", () => {
