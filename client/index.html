@@ -98,9 +98,47 @@
           <span class="grow"></span>
         </header>
 
-        <div id="message-board" class="message-board" aria-live="polite" aria-label="P2P messages" hidden>
-          <button id="copy-board" class="copy-board" type="button" title="copy messages" aria-label="copy messages">⧉</button>
-          <div id="message-stream" class="message-stream"></div>
+        <div class="transfer-workspace">
+          <aside class="file-manager" aria-label="session files and messages">
+            <div class="file-manager-head">
+              <div>
+                <div class="file-manager-title">session</div>
+                <div id="file-manager-count" class="file-manager-count">empty</div>
+              </div>
+              <div id="attachments-head" class="attachments-head" hidden>
+                <button id="zip-all" class="att-zip" type="button" title="download all attachments as zip" aria-label="download all attachments as zip">zip ↓</button>
+              </div>
+            </div>
+
+            <div id="message-board" class="message-board" aria-live="polite" aria-label="P2P messages" hidden>
+              <button id="copy-board" class="copy-board" type="button" title="copy messages" aria-label="copy messages">⧉</button>
+              <div class="pane-label">text</div>
+              <div id="message-stream" class="message-stream"></div>
+            </div>
+
+            <div class="pane-label file-label">files</div>
+            <div id="attachments" class="attachments"></div>
+          </aside>
+
+          <section class="preview-panel" aria-label="file preview and text editor">
+            <div class="preview-head">
+              <div>
+                <div id="preview-title" class="preview-title">drop text or files</div>
+                <div id="preview-meta" class="preview-meta">nothing is stored here after the session ends</div>
+              </div>
+              <div class="preview-actions">
+                <button id="preview-edit" class="preview-action" type="button" hidden>edit</button>
+                <button id="preview-download" class="preview-action" type="button" hidden>↓</button>
+              </div>
+            </div>
+            <div class="preview-body">
+              <div id="preview-empty" class="preview-empty">
+                <span>select a message or file</span>
+              </div>
+              <img id="preview-image" class="preview-image" alt="" hidden />
+              <textarea id="preview-text" class="preview-text" readonly hidden></textarea>
+            </div>
+          </section>
         </div>
 
         <div id="dropzone" class="dropzone">
@@ -119,11 +157,6 @@
             <button id="send" class="btn primary inline send-arrow" type="button" title="send" aria-label="send">↑</button>
           </div>
         </div>
-
-        <div id="attachments-head" class="attachments-head" hidden>
-          <button id="zip-all" class="att-zip" type="button" title="download all attachments as zip" aria-label="download all attachments as zip">zip ↓</button>
-        </div>
-        <div id="attachments" class="attachments"></div>
         <div class="session-footer" aria-label="session time">
           <span class="cd small session-countdown" id="conn-cd-wrap"><span id="cd-conn">120</span>s</span>
           <button id="session-extend" class="session-extend" type="button" hidden aria-label="extend session by 120 seconds">+120s</button>

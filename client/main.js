@@ -759,7 +759,195 @@
   const board = $("message-board");
   const stream = $("message-stream");
   const copyBoard = $("copy-board");
+  const fileCount = $("file-manager-count");
+  const previewTitle = $("preview-title");
+  const previewMeta = $("preview-meta");
+  const previewEmpty = $("preview-empty");
+  const previewImage = $("preview-image");
+  const previewText = $("preview-text");
+  const previewEdit = $("preview-edit");
+  const previewDownload = $("preview-download");
+  const previewItems = new Map();
+  let selectedPreviewId = "";
+  let previewTextSeq = 0;
+  let messageSeq = 0;
   let copyTimer = 0;
+
+  function updateFileCount() {
+    if (!fileCount) return;
+    const messages = Array.from(previewItems.values()).filter((item) => item.type === "message").length;
+    const files = previewItems.size - messages;
+    if (!previewItems.size) fileCount.textContent = "empty";
+    else if (files && messages) fileCount.textContent = `${files} files · ${messages} text`;
+    else if (files) fileCount.textContent = `${files} files`;
+    else fileCount.textContent = `${messages} text`;
+  }
+
+  function rememberPreviewItem(item) {
+    if (!item || !item.id) return;
+    previewItems.set(item.id, { ...(previewItems.get(item.id) || {}), ...item });
+    updateFileCount();
+    if (!selectedPreviewId) selectPreviewItem(item.id);
+    else if (selectedPreviewId === item.id) renderPreview(previewItems.get(item.id));
+  }
+
+  function selectPreviewItem(id) {
+    const item = previewItems.get(id);
+    if (!item) return;
+    selectedPreviewId = id;
+    document.querySelectorAll(".preview-selected").forEach((node) => node.classList.remove("preview-selected"));
+    const node = Array.from(document.querySelectorAll("[data-preview-id]")).find((el) => el.dataset.previewId === id);
+    if (node) node.classList.add("preview-selected");
+    renderPreview(item);
+  }
+
+  function clearPreview() {
+    selectedPreviewId = "";
+    previewItems.clear();
+    updateFileCount();
+    if (previewTitle) previewTitle.textContent = "drop text or files";
+    if (previewMeta) previewMeta.textContent = "nothing is stored here after the session ends";
+    if (previewEmpty) {
+      previewEmpty.hidden = false;
+      previewEmpty.innerHTML = "<span>select a message or file</span>";
+    }
+    if (previewImage) {
+      previewImage.hidden = true;
+      previewImage.removeAttribute("src");
+      previewImage.alt = "";
+    }
+    if (previewText) {
+      previewText.hidden = true;
+      previewText.value = "";
+    }
+    if (previewEdit) previewEdit.hidden = true;
+    if (previewDownload) previewDownload.hidden = true;
+  }
+
+  function renderPreview(item) {
+    if (!item) {
+      clearPreview();
+      return;
+    }
+    const seq = ++previewTextSeq;
+    const name = item.name || (item.type === "message" ? "text note" : "file");
+    if (previewTitle) previewTitle.textContent = name;
+    if (previewMeta) {
+      const pieces = [item.direction === "out" ? "sent" : item.direction === "in" ? "received" : item.status || ""];
+      if (item.kind) pieces.push(item.kind);
+      if (Number.isFinite(item.size)) pieces.push(fmtBytes(item.size));
+      previewMeta.textContent = pieces.filter(Boolean).join(" · ") || "ready";
+    }
+    if (previewEmpty) previewEmpty.hidden = true;
+    if (previewImage) {
+      previewImage.hidden = true;
+      previewImage.removeAttribute("src");
+      previewImage.alt = "";
+    }
+    if (previewText) {
+      previewText.hidden = true;
+      previewText.value = "";
+    }
+    if (previewDownload) {
+      previewDownload.hidden = !item.blob && item.type !== "message";
+      previewDownload.onclick = () => downloadPreviewItem(item);
+    }
+    if (previewEdit) {
+      previewEdit.hidden = item.type !== "message" && item.kind !== "text" && item.kind !== "code";
+      previewEdit.onclick = () => editPreviewItem(item);
+    }
+
+    if (item.type === "message") {
+      showPreviewText(item.text || "");
+      return;
+    }
+    if (!item.blob) {
+      showPreviewEmpty(item.status || "transfer in progress");
+      return;
+    }
+    if (item.kind === "image") {
+      const url = item.url || URL.createObjectURL(item.blob);
+      item.url = url;
+      objectUrls.add(url);
+      previewImage.src = url;
+      previewImage.alt = name;
+      previewImage.hidden = false;
+      return;
+    }
+    if (item.kind === "text" || item.kind === "code") {
+      previewText.hidden = false;
+      previewText.value = "loading…";
+      item.blob
+        .slice(0, 96_000)
+        .text()
+        .then((text) => {
+          if (seq !== previewTextSeq) return;
+          previewText.value = text + (item.blob.size > 96_000 ? "\n\n… truncated preview" : "");
+        })
+        .catch(() => {
+          if (seq === previewTextSeq) showPreviewEmpty("preview unavailable");
+        });
+      return;
+    }
+    showPreviewEmpty("preview unavailable · download to open");
+  }
+
+  function showPreviewText(text) {
+    if (!previewText) return;
+    previewText.hidden = false;
+    previewText.value = String(text || "");
+  }
+
+  function showPreviewEmpty(text) {
+    if (!previewEmpty) return;
+    previewEmpty.hidden = false;
+    previewEmpty.innerHTML = "";
+    const span = document.createElement("span");
+    span.textContent = text;
+    previewEmpty.appendChild(span);
+  }
+
+  function editPreviewItem(item) {
+    if (!item) return;
+    const placeText = (text) => {
+      editor.value = String(text || "");
+      autosize();
+      editor.focus();
+      editor.setSelectionRange(editor.value.length, editor.value.length);
+    };
+    if (item.type === "message") {
+      placeText(item.text);
+      return;
+    }
+    if (!item.blob) return;
+    item.blob
+      .slice(0, 96_000)
+      .text()
+      .then(placeText)
+      .catch(() => {});
+  }
+
+  function downloadPreviewItem(item) {
+    if (!item) return;
+    if (item.blob) {
+      const url = item.url || URL.createObjectURL(item.blob);
+      item.url = url;
+      objectUrls.add(url);
+      downloadBlobUrl(url, item.name || "plik");
+      return;
+    }
+    if (item.type === "message") {
+      const file = textMessageFile(item.text || "");
+      const url = URL.createObjectURL(file);
+      objectUrls.add(url);
+      downloadBlobUrl(url, file.name);
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        objectUrls.delete(url);
+      }, 60_000);
+    }
+  }
+
   function autosize() {
     editor.style.height = "auto";
     editor.style.height = Math.min(Math.max(editor.scrollHeight, 42), 124) + "px";
@@ -794,11 +982,28 @@
     const value = String(text || "").trim();
     if (!value) return;
     board.hidden = false;
-    const bubble = document.createElement("div");
+    const id = `msg-${Date.now()}-${++messageSeq}`;
+    const bubble = document.createElement("button");
+    bubble.type = "button";
     bubble.className = "msg-bubble " + (direction === "out" ? "out" : "in");
+    bubble.dataset.previewId = id;
     bubble.textContent = value.slice(0, 8000);
+    bubble.addEventListener("click", () => selectPreviewItem(id));
     stream.appendChild(bubble);
-    while (stream.children.length > 80) stream.firstElementChild.remove();
+    while (stream.children.length > 80) {
+      const old = stream.firstElementChild;
+      if (old && old.dataset && old.dataset.previewId) previewItems.delete(old.dataset.previewId);
+      if (old) old.remove();
+    }
+    rememberPreviewItem({
+      id,
+      type: "message",
+      direction,
+      kind: "text",
+      name: direction === "out" ? "sent text" : "received text",
+      size: value.length,
+      text: value,
+    });
     requestAnimationFrame(() => {
       stream.scrollTop = stream.scrollHeight;
     });
@@ -1209,21 +1414,36 @@
   function makeCard(id, name, size, stateText, cancelable, meta) {
     const node = tpl.content.firstElementChild.cloneNode(true);
     node.dataset.id = id;
+    node.dataset.previewId = id;
     node.querySelector(".att-name").textContent = name;
     node.querySelector(".att-size").textContent = fmtBytes(size);
     node.querySelector(".att-state").textContent = stateText;
     decorateCard(node, meta || { name, size });
+    node.addEventListener("click", () => selectPreviewItem(id));
     const action = node.querySelector(".att-action");
     if (cancelable) {
       action.textContent = "×";
       action.title = "anuluj";
-      action.onclick = () => window.__T.cancelTransfer(id);
+      action.onclick = (event) => {
+        event.stopPropagation();
+        window.__T.cancelTransfer(id);
+      };
     } else {
       action.textContent = "";
       action.style.display = "none";
     }
     attWrap.prepend(node);
     cards[id] = node;
+    rememberPreviewItem({
+      id,
+      type: "file",
+      status: stateText,
+      direction: cancelable ? "out" : "in",
+      name,
+      size,
+      mime: meta && meta.mime,
+      kind: fileKind(name, String((meta && meta.mime) || "")),
+    });
     return node;
   }
 
@@ -1287,6 +1507,7 @@
     const n = cards[id];
     if (!n) return;
     n.querySelector(".att-fill").style.width = Math.round(frac * 100) + "%";
+    rememberPreviewItem({ id, status: `${Math.round(frac * 100)}%` });
   }
 
   function cardDone(id, text) {
@@ -1296,6 +1517,7 @@
     n.querySelector(".att-fill").style.width = "100%";
     n.querySelector(".att-state").textContent = text;
     n.querySelector(".att-action").style.display = "none";
+    rememberPreviewItem({ id, status: text });
   }
 
   function cardError(id, text) {
@@ -1304,6 +1526,7 @@
     n.classList.add("error");
     n.querySelector(".att-state").textContent = text || "błąd";
     n.querySelector(".att-action").style.display = "none";
+    rememberPreviewItem({ id, status: text || "błąd" });
   }
 
   function recvCard(m) {
@@ -1324,11 +1547,36 @@
     a.style.display = "grid";
     a.textContent = "↓";
     a.title = "pobierz";
-    a.onclick = () => downloadBlobUrl(url, name || "plik");
+    a.onclick = (event) => {
+      event.stopPropagation();
+      downloadBlobUrl(url, name || "plik");
+    };
+    rememberPreviewItem({
+      id,
+      type: "file",
+      status: "odebrano",
+      direction: "in",
+      name: name || "plik",
+      size: blob.size,
+      mime: blob.type,
+      kind: fileKind(name || "plik", blob.type || ""),
+      blob,
+      url,
+    });
   }
 
   function rememberAttachment(id, blob, name) {
     completedAttachments.set(id, { blob, name: safeFileName(name, `plik-${completedAttachments.size + 1}`) });
+    rememberPreviewItem({
+      id,
+      type: "file",
+      status: "ready",
+      name: safeFileName(name, `plik-${completedAttachments.size + 1}`),
+      size: blob.size,
+      mime: blob.type,
+      kind: fileKind(name || "plik", blob.type || ""),
+      blob,
+    });
     updateZipButton();
   }
 
@@ -1747,6 +1995,7 @@
     for (const id in cards) delete cards[id];
     completedAttachments.clear();
     updateZipButton();
+    clearPreview();
     $("your-pick").textContent = "";
     $("seed-label").textContent = "";
     $("seed-label").classList.remove("wait-name", "wait-emoji");
