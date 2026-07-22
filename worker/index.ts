@@ -426,7 +426,9 @@ function withSecurityHeadersInit(req: Request, init: ResponseInit): ResponseInit
   ) {
     headers.set("Cache-Control", "public, max-age=31536000, immutable");
   } else if (url.pathname === "/" || url.pathname === "/index.html") {
-    headers.set("Cache-Control", "no-cache");
+    headers.set("Cache-Control", "no-store, max-age=0, must-revalidate");
+    headers.set("CDN-Cache-Control", "no-store");
+    headers.set("Cloudflare-CDN-Cache-Control", "no-store");
   }
 
   return {
