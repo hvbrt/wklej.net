@@ -1534,6 +1534,10 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   cursor: pointer;
   transition: transform .1s, opacity .12s, filter .12s;
 }
+.preview-action.copy-mark {
+  position: relative;
+  font-size: 0;
+}
 .preview-action[hidden] { display: none; }
 .preview-action:hover,
 .preview-action:focus-visible {
@@ -2032,28 +2036,28 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   opacity: .72;
   transition: opacity .12s, transform .1s, filter .12s;
 }
-.att-copy::before,
-.att-copy::after {
+.copy-mark::before,
+.copy-mark::after {
   content: "";
   position: absolute;
-  width: 10px;
-  height: 11px;
-  border: 2.2px solid currentColor;
-  border-radius: 3px;
+  width: 8px;
+  height: 9px;
+  border: 1.8px solid currentColor;
+  border-radius: 2.6px;
   background: transparent;
 }
-.att-copy::before {
-  transform: translate(-2px, 2px);
+.copy-mark::before {
+  transform: translate(-1.8px, 1.8px);
   opacity: .58;
 }
-.att-copy::after {
-  transform: translate(2px, -2px);
+.copy-mark::after {
+  transform: translate(1.8px, -1.8px);
 }
-.att-copy.is-feedback {
+.copy-mark.is-feedback {
   font-size: 12px;
 }
-.att-copy.is-feedback::before,
-.att-copy.is-feedback::after {
+.copy-mark.is-feedback::before,
+.copy-mark.is-feedback::after {
   display: none;
 }
 .att-copy:hover,
