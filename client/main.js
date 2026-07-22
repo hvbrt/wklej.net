@@ -818,6 +818,7 @@
   function resetPreviewPanel() {
     if (transferWorkspace) transferWorkspace.classList.add("no-preview");
     if (previewPanel) previewPanel.hidden = true;
+    if (previewPanel) previewPanel.classList.remove("editing");
     if (dropzone) dropzone.hidden = false;
     if (previewTitle) previewTitle.textContent = "drop text or files";
     if (previewMeta) previewMeta.textContent = "nothing is stored here after the session ends";
@@ -850,6 +851,7 @@
     const name = item.name || (item.type === "message" ? "text note" : "file");
     if (transferWorkspace) transferWorkspace.classList.remove("no-preview");
     if (previewPanel) previewPanel.hidden = false;
+    if (previewPanel) previewPanel.classList.remove("editing");
     if (dropzone) dropzone.hidden = true;
     if (previewTitle) previewTitle.textContent = name;
     if (previewMeta) {
@@ -921,6 +923,7 @@
     if (!item || item.type !== "message" || !previewText || !previewEdit) return;
     if (previewText.readOnly) {
       previewText.readOnly = false;
+      if (previewPanel) previewPanel.classList.add("editing");
       if (dropzone) dropzone.hidden = true;
       if (previewDownload) previewDownload.hidden = true;
       previewEdit.textContent = "↑";
@@ -934,7 +937,7 @@
     if (!value) return;
     savePreviewTextEdit(item, value);
     previewText.readOnly = true;
-    renderPreview(previewItems.get(item.id));
+    resetPreviewSelection();
   }
 
   function savePreviewTextEdit(item, value) {

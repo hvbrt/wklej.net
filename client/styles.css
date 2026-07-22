@@ -1483,6 +1483,11 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   padding: 0;
   border-bottom: 0;
 }
+.preview-panel.editing .preview-head {
+  top: auto;
+  right: 12px;
+  bottom: 12px;
+}
 .preview-head > div:first-child {
   display: none;
 }
@@ -1568,6 +1573,10 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   line-height: 1.45;
   outline: none;
   scrollbar-width: thin;
+}
+.preview-panel.editing .preview-text {
+  padding-right: 56px;
+  padding-bottom: 48px;
 }
 .preview-text:not([readonly]) {
   color: #05070d;
@@ -2189,6 +2198,14 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
     padding-right: 86px;
     font-size: 12px;
     line-height: 1.35;
+  }
+  .preview-panel.editing .preview-head {
+    right: 12px;
+    bottom: 12px;
+  }
+  .preview-panel.editing .preview-text {
+    padding-right: 52px;
+    padding-bottom: 44px;
   }
   .preview-action {
     min-width: 32px;
