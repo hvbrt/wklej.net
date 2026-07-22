@@ -2198,15 +2198,16 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   .transfer-workspace.no-preview .file-manager {
     width: 100%;
     aspect-ratio: auto;
-    min-height: 220px;
-    max-height: 248px;
+    min-height: 116px;
+    max-height: 116px;
   }
   .transfer-workspace.no-preview .attachments {
     height: 100%;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+    grid-template-columns: repeat(auto-fill, 82px);
     align-content: start;
-    justify-items: center;
+    justify-content: start;
+    justify-items: start;
     gap: 10px;
     overflow-x: hidden;
     overflow-y: auto;
