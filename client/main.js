@@ -791,6 +791,10 @@
   function selectPreviewItem(id) {
     const item = previewItems.get(id);
     if (!item) return;
+    if (selectedPreviewId === id && previewPanel && !previewPanel.hidden) {
+      resetPreviewSelection();
+      return;
+    }
     selectedPreviewId = id;
     document.querySelectorAll(".preview-selected").forEach((node) => node.classList.remove("preview-selected"));
     const node = Array.from(document.querySelectorAll("[data-preview-id]")).find((el) => el.dataset.previewId === id);
