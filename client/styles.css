@@ -1534,12 +1534,8 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   min-height: 0;
   border: 0;
   border-radius: 15px;
-  background:
-    radial-gradient(circle at 18% 12%, rgba(125,211,252,.16), transparent 38%),
-    linear-gradient(145deg, rgba(255,255,255,.82), rgba(255,255,255,.58));
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.62),
-    0 10px 24px -24px rgba(20,24,43,.5);
+  background: transparent;
+  box-shadow: none;
 }
 .preview-empty {
   display: grid;
@@ -1572,12 +1568,8 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 }
 .preview-text:not([readonly]) {
   color: #05070d;
-  background:
-    radial-gradient(circle at 18% 12%, rgba(125,211,252,.18), transparent 38%),
-    linear-gradient(145deg, rgba(255,255,255,.9), rgba(255,255,255,.64));
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.74),
-    0 14px 28px -26px rgba(20,24,43,.52);
+  background: transparent;
+  box-shadow: none;
 }
 .preview-image {
   object-fit: contain;
@@ -1724,9 +1716,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   resize: none;
   border: 0;
   border-radius: 15px;
-  background:
-    radial-gradient(circle at 18% 12%, rgba(125,211,252,.18), transparent 38%),
-    linear-gradient(145deg, rgba(255,255,255,.9), rgba(255,255,255,.62));
+  background: transparent;
   color: #05070d;
   caret-color: #05070d;
   font-family: var(--sans);
@@ -1735,22 +1725,16 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   padding: 10px 12px;
   outline: none;
   max-height: 124px;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.72),
-    0 12px 28px -28px rgba(20,24,43,.5);
+  box-shadow: none;
   animation: none;
 }
 .editor:focus {
   animation: none;
   color: #05070d;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.78),
-    0 14px 30px -28px rgba(20,24,43,.58);
+  box-shadow: none;
 }
 .session-themed .editor:focus {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.78),
-    0 14px 30px -28px rgba(20,24,43,.58);
+  box-shadow: none;
 }
 .editor-placeholder { display: none; }
 .editor-placeholder span {
