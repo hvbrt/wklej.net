@@ -128,6 +128,7 @@
               </div>
               <div class="preview-actions">
                 <button id="preview-edit" class="preview-action" type="button" hidden>edit</button>
+                <button id="preview-copy" class="preview-action" type="button" hidden title="copy" aria-label="copy">⧉</button>
                 <button id="preview-download" class="preview-action" type="button" hidden>↓</button>
               </div>
             </div>
@@ -146,6 +147,7 @@
             id="msg"
             class="editor"
             rows="1"
+            placeholder="wklej tekst"
             aria-label="write text or drop file here - przeciagnij plik lub napisz wiadomość"
           ></textarea>
           <div id="editor-placeholder" class="editor-placeholder" aria-hidden="true"></div>
@@ -208,6 +210,7 @@
 
     <template id="att-card">
       <div class="att">
+        <button class="att-copy" type="button" title="copy" aria-label="copy">⧉</button>
         <div class="att-icon">📄</div>
         <div class="att-main">
           <div class="att-name"></div>

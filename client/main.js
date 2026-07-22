@@ -782,6 +782,7 @@
   const previewImage = $("preview-image");
   const previewText = $("preview-text");
   const previewEdit = $("preview-edit");
+  const previewCopy = $("preview-copy");
   const previewDownload = $("preview-download");
   const previewItems = new Map();
   let selectedPreviewId = "";
@@ -854,6 +855,7 @@
       previewEdit.hidden = true;
       previewEdit.textContent = "edit";
     }
+    if (previewCopy) previewCopy.hidden = true;
     if (previewDownload) previewDownload.hidden = true;
   }
 
@@ -888,6 +890,11 @@
     if (previewDownload) {
       previewDownload.hidden = !item.blob && item.type !== "message";
       previewDownload.onclick = () => downloadPreviewItem(item);
+    }
+    if (previewCopy) {
+      previewCopy.hidden = false;
+      previewCopy.textContent = "⧉";
+      previewCopy.onclick = () => copyPreviewItem(item, previewCopy);
     }
     if (previewEdit) {
       previewEdit.hidden = item.type !== "message";
@@ -1051,6 +1058,7 @@
     node.querySelector(".att-fill").style.width = "100%";
     decorateCard(node, { name: item.name + ".txt", size: item.size, mime: "text/plain", kind: "text" });
     node.addEventListener("click", () => selectPreviewItem(id));
+    wireAttachmentCopy(node, id);
     const action = node.querySelector(".att-action");
     action.textContent = "";
     action.style.display = "none";
@@ -1082,6 +1090,46 @@
         copyBoard.textContent = "⧉";
       }, 1100);
     }
+  }
+
+  async function copyPreviewItem(item, control) {
+    if (!item) return;
+    try {
+      if (item.type === "message") {
+        await copyToClipboard(item.text || "");
+      } else if (item.blob && navigator.clipboard && navigator.clipboard.write && window.ClipboardItem) {
+        await navigator.clipboard.write([new ClipboardItem({ [item.blob.type || "application/octet-stream"]: item.blob })]);
+      } else {
+        await copyToClipboard(item.name || "file");
+      }
+      flashCopyControl(control, "✓");
+    } catch {
+      try {
+        await copyToClipboard(item.name || "file");
+        flashCopyControl(control, "✓");
+      } catch {
+        flashCopyControl(control, "!");
+      }
+    }
+  }
+
+  function wireAttachmentCopy(node, id) {
+    const copy = node.querySelector(".att-copy");
+    if (!copy) return;
+    copy.addEventListener("click", (event) => {
+      event.stopPropagation();
+      copyPreviewItem(previewItems.get(id), copy);
+    });
+  }
+
+  function flashCopyControl(control, text) {
+    if (!control) return;
+    const before = control.textContent || "⧉";
+    control.textContent = text;
+    clearTimeout(control.copyTimer);
+    control.copyTimer = setTimeout(() => {
+      control.textContent = before;
+    }, 900);
   }
 
   async function copyToClipboard(text) {
@@ -1470,6 +1518,7 @@
     node.querySelector(".att-state").textContent = stateText;
     decorateCard(node, meta || { name, size });
     node.addEventListener("click", () => selectPreviewItem(id));
+    wireAttachmentCopy(node, id);
     const action = node.querySelector(".att-action");
     if (cancelable) {
       action.textContent = "×";
