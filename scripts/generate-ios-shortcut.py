@@ -79,17 +79,6 @@ def wait_action(seconds: int) -> dict:
     )
 
 
-def get_contents_of_url_action(output_uuid: str, url_ref: dict) -> dict:
-    return raw_action(
-        "is.workflow.actions.downloadurl",
-        {
-            "UUID": output_uuid,
-            "WFHTTPMethod": "GET",
-            "WFURL": attachment(url_ref),
-        },
-    )
-
-
 def share_shortcut() -> dict:
     ask_room_uuid = uid()
     shared_var_uuid = uid()
@@ -241,26 +230,12 @@ def wait_share_shortcut() -> dict:
     name_url_uuid = uid()
     b64_uuid = uid()
     b64_url_uuid = uid()
-    create_url_uuid = uid()
-    wait_url_uuid = uid()
-    wait_response_uuid = uid()
-    attach_url_uuid = uid()
+    url_uuid = uid()
 
-    create_template = (
+    url_template = (
         "https://wklej.net/?shortcut=create"
         f"&room={PLACEHOLDER}"
-        f"#callback={PLACEHOLDER}"
-    )
-    wait_template = (
-        "https://wklej.net/api/shortcut-wait"
-        f"?callback={PLACEHOLDER}"
-        "&timeout=110"
-    )
-    attach_template = (
-        "https://wklej.net/shortcut-attach"
-        f"?room={PLACEHOLDER}"
-        "&targetRole=seed"
-        f"&filename={PLACEHOLDER}"
+        f"#filename={PLACEHOLDER}"
         "&mime=application/octet-stream"
         f"&file={PLACEHOLDER}"
     )
@@ -305,8 +280,8 @@ def wait_share_shortcut() -> dict:
                 "is.workflow.actions.comment",
                 {
                     "WFCommentActionText": (
-                        "Reliable iOS flow: open a short room URL first, wait until the browser reports "
-                        "that E2EE/DataChannel is ready, then hand off the shared item through the service worker."
+                        "Open one Safari URL that creates a room and queues the shared item locally. "
+                        "The payload stays in the URL fragment and sends only after browser E2EE/DataChannel is ready."
                     )
                 },
             ),
@@ -328,31 +303,6 @@ def wait_share_shortcut() -> dict:
                     "WFInput": attachment(action_output(ask_room_uuid, "Ask for Input")),
                 },
             ),
-            raw_action(
-                "is.workflow.actions.url",
-                {
-                    "UUID": create_url_uuid,
-                    "WFURLActionURL": token_string(
-                        create_template,
-                        [
-                            action_output(room_url_uuid, "URL Encoded Text"),
-                            action_output(room_url_uuid, "URL Encoded Text"),
-                        ],
-                    ),
-                },
-            ),
-            raw_action("is.workflow.actions.openurl", {"WFInput": attachment(action_output(create_url_uuid, "URL"))}),
-            raw_action(
-                "is.workflow.actions.url",
-                {
-                    "UUID": wait_url_uuid,
-                    "WFURLActionURL": token_string(
-                        wait_template,
-                        [action_output(room_url_uuid, "URL Encoded Text")],
-                    ),
-                },
-            ),
-            get_contents_of_url_action(wait_response_uuid, action_output(wait_url_uuid, "URL")),
             get_variable_action(shared_name_uuid, "shared"),
             raw_action(
                 "is.workflow.actions.getitemname",
@@ -390,9 +340,9 @@ def wait_share_shortcut() -> dict:
             raw_action(
                 "is.workflow.actions.url",
                 {
-                    "UUID": attach_url_uuid,
+                    "UUID": url_uuid,
                     "WFURLActionURL": token_string(
-                        attach_template,
+                        url_template,
                         [
                             action_output(room_url_uuid, "URL Encoded Text"),
                             action_output(name_url_uuid, "URL Encoded Text"),
@@ -401,7 +351,7 @@ def wait_share_shortcut() -> dict:
                     ),
                 },
             ),
-            raw_action("is.workflow.actions.openurl", {"WFInput": attachment(action_output(attach_url_uuid, "URL"))}),
+            raw_action("is.workflow.actions.openurl", {"WFInput": attachment(action_output(url_uuid, "URL"))}),
         ],
     }
 

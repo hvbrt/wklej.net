@@ -52,7 +52,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>UUID</key>
-				<string>4DA51822-8A4E-45D9-8CF5-E99C9254B2E0</string>
+				<string>87257B2D-FC8C-4192-A9E3-432991FF381C</string>
 				<key>WFAskActionPrompt</key>
 				<string>Room name</string>
 				<key>WFInputType</key>
@@ -69,7 +69,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>UUID</key>
-				<string>711DC860-2605-49D5-A88D-177EFF31A867</string>
+				<string>E9878B1A-FB9F-4C1C-B3D1-C91A1574834F</string>
 				<key>WFURLActionURL</key>
 				<dict>
 					<key>Value</key>
@@ -81,7 +81,7 @@
 							<key>{38, 1}</key>
 							<dict>
 								<key>OutputUUID</key>
-								<string>4DA51822-8A4E-45D9-8CF5-E99C9254B2E0</string>
+								<string>87257B2D-FC8C-4192-A9E3-432991FF381C</string>
 								<key>Type</key>
 								<string>ActionOutput</string>
 								<key>OutputName</key>
@@ -104,7 +104,7 @@
 					<key>Value</key>
 					<dict>
 						<key>OutputUUID</key>
-						<string>711DC860-2605-49D5-A88D-177EFF31A867</string>
+						<string>E9878B1A-FB9F-4C1C-B3D1-C91A1574834F</string>
 						<key>Type</key>
 						<string>ActionOutput</string>
 						<key>OutputName</key>
