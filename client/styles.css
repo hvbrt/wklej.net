@@ -2157,11 +2157,11 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
 
 @media (min-width: 721px) {
   .transfer-workspace.no-preview {
-    grid-template-columns: minmax(132px, 162px);
+    grid-template-columns: minmax(216px, 248px);
     justify-content: start;
   }
   .transfer-workspace.no-preview .file-manager {
-    width: min(162px, 28vw);
+    width: clamp(216px, 32vw, 248px);
     aspect-ratio: 1 / 1;
     max-height: none;
     min-height: 0;
@@ -2169,7 +2169,7 @@ h2 { font-family: var(--disp); font-size: 19px; margin: 6px 0 8px; }
   .transfer-workspace.no-preview .attachments {
     height: 100%;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
+    grid-template-columns: repeat(2, minmax(76px, 1fr));
     align-content: start;
     justify-items: center;
     gap: 8px;
